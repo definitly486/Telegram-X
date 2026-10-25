@@ -934,6 +934,46 @@ public class Tdlib implements TdlibProvider, Settings.SettingsChangeListener, Da
     });
   }
 
+  /**
+   * Force-closes this TDLib instance for a consistent private-data snapshot.
+   * Unlike normal idle pausing, this deliberately ignores UI reference counts. The caller must
+   * prevent account UI operations during the snapshot and restart the process after copying.
+   */
+  public void pauseForBackup (@NonNull Runnable after) {
+    runOnUiThread(() -> {
+      final ClientHolder holder;
+      synchronized (clientLock) {
+        if (instancePaused) {
+          after.run();
+          return;
+        }
+        if (client == null) {
+          instancePaused = true;
+          after.run();
+          return;
+        }
+        instancePaused = true;
+        holder = client;
+        holder.sendClose();
+      }
+      new Thread(() -> {
+        boolean closed;
+        try {
+          closed = holder.closeLatch.await(90, TimeUnit.SECONDS);
+        } catch (InterruptedException e) {
+          Thread.currentThread().interrupt();
+          closed = false;
+        }
+        if (!closed) {
+          synchronized (clientLock) {
+            if (client == holder) instancePaused = false;
+          }
+        }
+        after.run();
+      }, "TGX-TDLib-Backup-Close").start();
+    });
+  }
+
   private boolean shouldPause () {
     if (instancePaused)
       return false; // Instance already paused
