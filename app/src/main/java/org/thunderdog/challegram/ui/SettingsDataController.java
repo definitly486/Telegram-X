@@ -262,9 +262,9 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
       rawItems = new ListItem[] {
         new ListItem(ListItem.TYPE_HEADER, 0, 0, R.string.BackupAndRestore),
         new ListItem(ListItem.TYPE_SHADOW_TOP),
-        new ListItem(ListItem.TYPE_SETTING, R.id.btn_exportTdlibBackup, R.drawable.baseline_file_upload_24, R.string.ExportBackup),
+        new ListItem(ListItem.TYPE_SETTING, R.id.btn_exportTdlibBackup, R.drawable.baseline_import_export_24, R.string.ExportBackup),
         new ListItem(ListItem.TYPE_SEPARATOR_FULL),
-        new ListItem(ListItem.TYPE_SETTING, R.id.btn_importTdlibBackup, R.drawable.baseline_file_download_24, R.string.ImportBackup),
+        new ListItem(ListItem.TYPE_SETTING, R.id.btn_importTdlibBackup, R.drawable.baseline_import_export_24, R.string.ImportBackup),
         new ListItem(ListItem.TYPE_SHADOW_BOTTOM),
         new ListItem(ListItem.TYPE_SHADOW_TOP),
         new ListItem(ListItem.TYPE_VALUED_SETTING, R.id.btn_storageUsage, R.drawable.baseline_data_usage_24, R.string.StorageUsage),
