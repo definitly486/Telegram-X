@@ -1930,6 +1930,13 @@ public class TdlibManager implements Iterable<TdlibAccount>, UI.StateListener {
     return activeAccounts;
   }
 
+  /** Returns a stable copy of every configured account for backup maintenance. */
+  public List<TdlibAccount> getAccountsForBackup () {
+    synchronized (accounts) {
+      return new ArrayList<>(accounts);
+    }
+  }
+
   /**
    * @param excludeAccountId Account identifier, which neighbor should be found
    * @return Next account in the list to be switched to
