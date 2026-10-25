@@ -954,7 +954,14 @@ public class Tdlib implements TdlibProvider, Settings.SettingsChangeListener, Da
         }
         instancePaused = true;
         holder = client;
-        holder.sendClose();
+        try {
+          holder.sendClose();
+        } catch (Throwable error) {
+          instancePaused = false;
+          android.util.Log.e("TGXBackup", "Unable to close TDLib for backup", error);
+          after.run();
+          return;
+        }
       }
       new Thread(() -> {
         boolean closed;
