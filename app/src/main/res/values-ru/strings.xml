@@ -4,7 +4,7 @@
   <string name="ExportBackup">Экспорт резервной копии</string>
   <string name="ImportBackup">Импорт резервной копии</string>
   <string name="BackupPasswordTitle">Пароль резервной копии</string>
-  <string name="BackupPasswordHint">Введите надёжный пароль (не менее 8 символов)</string>
+  <string name="BackupPasswordHint">Введите надёжный пароль (не менее 12 символов)</string>
   <string name="BackupExportSuccess">Резервная копия зашифрована и экспортирована. Telegram X закроется; откройте приложение снова.</string>
   <string name="BackupExportFailed">Ошибка резервного копирования: %1$s. Telegram X закроется для безопасного перезапуска TDLib.</string>
   <string name="BackupImportPrepared">Архив проверен. Принудительно остановите и снова откройте Telegram X, чтобы восстановить данные до запуска TDLib.</string>
