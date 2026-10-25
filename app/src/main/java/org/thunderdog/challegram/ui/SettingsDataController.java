@@ -388,9 +388,9 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
         for (org.thunderdog.challegram.telegram.TdlibAccount account : initialized) {
           pausedAccounts.add(account);
           try {
-            account.tdlibNoWakeup().client().send(new TdApi.Close(), object -> {
-              if (!(object instanceof TdApi.Ok)) {
-                closeError.compareAndSet(null, new IOException("TDLib did not close cleanly: " + object));
+            account.tdlibNoWakeup().pauseForBackup(() -> {
+              if (!account.tdlibNoWakeup().isPaused()) {
+                closeError.compareAndSet(null, new IOException("TDLib did not reach the paused state"));
               }
               closed.countDown();
             });
@@ -416,11 +416,11 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
       } finally {
         java.util.Arrays.fill(password, '\\0');
         deleteBackupTree(staging);
-        // Recreate/wake every client that was deliberately closed for the consistent snapshot.
-        for (org.thunderdog.challegram.telegram.TdlibAccount account : pausedAccounts) {
-          try { account.tdlib(); } catch (Throwable t) {
-            android.util.Log.e("TGXBackup", "Unable to restart TDLib after backup", t);
-          }
+        // Do not reopen databases in this process: the snapshot must remain quiescent after
+        // copying. Restarting the app creates fresh TDLib clients from the copied files.
+        if (!pausedAccounts.isEmpty()) {
+          new Handler(Looper.getMainLooper()).postDelayed(
+            () -> android.os.Process.killProcess(android.os.Process.myPid()), 2000);
         }
       }
     }, "TGX-Backup-Export").start();
