@@ -170,7 +170,9 @@ public final class TdlibBackupArchive {
         while ((entry = zip.getNextEntry()) != null) {
           if (++entries > MAX_ENTRIES) throw new IOException("Too many archive entries");
           String name = entry.getName();
-          File target = safeChild(validationDirectory, name);
+          String safeName = entry.isDirectory() && name.endsWith("/")
+              ? name.substring(0, name.length() - 1) : name;
+          File target = safeChild(validationDirectory, safeName);
           if (entry.isDirectory()) {
             if (!target.isDirectory() && !target.mkdirs()) throw new IOException("Cannot create directory");
           } else {
@@ -222,7 +224,6 @@ public final class TdlibBackupArchive {
       if (relative.isEmpty() || relative.startsWith("/") || relative.contains("../")) {
         throw new IOException("Invalid path in snapshot");
       }
-      if (child.isSymbolicLink()) throw new IOException("Symbolic links are not allowed");
       if (child.isDirectory()) {
         zip.putNextEntry(new ZipEntry(relative.endsWith("/") ? relative : relative + "/"));
         zip.closeEntry();
