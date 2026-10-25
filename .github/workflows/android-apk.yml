@@ -11,6 +11,11 @@ on:
 permissions:
   contents: write
 
+# Avoid several expensive native Android builds racing after rapid commits.
+concurrency:
+  group: telegram-x-apk-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-24.04
