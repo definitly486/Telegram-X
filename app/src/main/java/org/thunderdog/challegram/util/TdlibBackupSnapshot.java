@@ -20,6 +20,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -35,6 +36,9 @@ public final class TdlibBackupSnapshot {
   private static final String INTERNAL_ROOT = "internal";
   private static final String EXTERNAL_ROOT = "external";
   private static final String[] DATA_DIRS = {"files", "shared_prefs", "databases", "no_backup"};
+  public static final String PENDING_DIRECTORY = ".tgx-backup-pending";
+  private static final String ROLLBACK_DIRECTORY = ".tgx-backup-rollback";
+  private static final String READY_MARKER = "READY";
 
   private TdlibBackupSnapshot() {}
 
@@ -93,6 +97,110 @@ public final class TdlibBackupSnapshot {
     // Basic structural checks. Do not inspect/copy live TDLib databases while the app is running.
     File accountConfig = new File(new File(internal, "files"), "tdlib_accounts.bin");
     return new SnapshotRoots(internal, external.exists() ? external : null, accountConfig.exists());
+  }
+
+
+  /** Marks a fully decrypted and validated snapshot for installation on the next process start. */
+  public static void markPendingRestore(@NonNull Context context, @NonNull File staging)
+      throws IOException {
+    File root = context.getDataDir();
+    File pending = new File(root, PENDING_DIRECTORY);
+    if (pending.exists()) deleteTree(pending);
+    if (!staging.getCanonicalFile().equals(pending.getCanonicalFile())) {
+      if (!staging.renameTo(pending)) {
+        copyTree(staging, pending);
+        deleteTree(staging);
+      }
+    }
+    File ready = new File(pending, READY_MARKER);
+    try (FileOutputStream out = new FileOutputStream(ready)) {
+      out.write("TGX-RESTORE-1".getBytes(StandardCharsets.US_ASCII));
+      out.getFD().sync();
+    }
+  }
+
+  /**
+   * Installs a previously authenticated snapshot before UI.initApp can initialize TDLib.
+   * Existing directories are renamed to a rollback area first and restored if any operation fails.
+   */
+  public static boolean applyPendingRestore(@NonNull Context context) {
+    File root = context.getDataDir();
+    File pending = new File(root, PENDING_DIRECTORY);
+    File ready = new File(pending, READY_MARKER);
+    if (!ready.isFile()) return false;
+
+    File internal = new File(pending, INTERNAL_ROOT);
+    File rollback = new File(root, ROLLBACK_DIRECTORY);
+    List<String> installed = new ArrayList<>();
+    try {
+      if (!internal.isDirectory()) throw new IOException("Missing internal snapshot");
+      if (rollback.exists()) deleteTree(rollback);
+      if (!rollback.mkdirs()) throw new IOException("Cannot create rollback directory");
+
+      for (String name : DATA_DIRS) {
+        File staged = new File(internal, name);
+        if (!staged.exists()) continue;
+        File current = new File(root, name);
+        File old = new File(rollback, name);
+        if (current.exists() && !current.renameTo(old)) {
+          throw new IOException("Cannot preserve existing " + name);
+        }
+        if (!staged.renameTo(current)) {
+          if (old.exists()) old.renameTo(current);
+          throw new IOException("Cannot install restored " + name);
+        }
+        installed.add(name);
+      }
+
+      File external = new File(pending, EXTERNAL_ROOT);
+      if (external.isDirectory()) replaceExternalTree(context, external, rollback);
+
+      deleteTree(pending);
+      deleteTree(rollback);
+      return true;
+    } catch (Throwable error) {
+      for (int i = installed.size() - 1; i >= 0; i--) {
+        String name = installed.get(i);
+        File current = new File(root, name);
+        File old = new File(rollback, name);
+        deleteTree(current);
+        if (old.exists()) old.renameTo(current);
+      }
+      ready.delete();
+      android.util.Log.e("TGXBackup", "Unable to apply staged backup; rolled back", error);
+      return false;
+    }
+  }
+
+  private static void replaceExternalTree(Context context, File staged, File rollback)
+      throws IOException {
+    File target = context.getExternalFilesDir(null);
+    if (target == null) throw new IOException("External app storage is unavailable");
+    File parent = target.getParentFile();
+    if (parent == null) throw new IOException("Invalid external app storage path");
+    File temp = new File(parent, target.getName() + ".tgx-restore-new");
+    File old = new File(parent, target.getName() + ".tgx-restore-old");
+    deleteTree(temp);
+    deleteTree(old);
+    copyTree(staged, temp);
+    if (target.exists() && !target.renameTo(old)) {
+      deleteTree(temp);
+      throw new IOException("Cannot preserve external TDLib files");
+    }
+    if (!temp.renameTo(target)) {
+      if (old.exists()) old.renameTo(target);
+      throw new IOException("Cannot install external TDLib files");
+    }
+    deleteTree(old);
+  }
+
+  private static void deleteTree(File file) {
+    if (file == null || !file.exists()) return;
+    if (file.isDirectory()) {
+      File[] children = file.listFiles();
+      if (children != null) for (File child : children) deleteTree(child);
+    }
+    file.delete();
   }
 
   private static void copyTree(File source, File destination, File... excluded)
