@@ -19,11 +19,14 @@ import androidx.multidex.MultiDexApplication;
 import androidx.work.Configuration;
 
 import org.thunderdog.challegram.tool.UI;
+import org.thunderdog.challegram.util.TdlibBackupSnapshot;
 
 public final class BaseApplication extends MultiDexApplication implements Configuration.Provider {
   @Override
   public void onCreate () {
     super.onCreate();
+    // A validated import is installed before UI.initApp can create any TDLib clients.
+    TdlibBackupSnapshot.applyPendingRestore(this);
     UI.initApp(getApplicationContext());
   }
 
