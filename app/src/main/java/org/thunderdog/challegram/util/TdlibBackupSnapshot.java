@@ -105,7 +105,10 @@ public final class TdlibBackupSnapshot {
       throws IOException {
     File root = context.getDataDir();
     File pending = new File(root, PENDING_DIRECTORY);
-    if (pending.exists()) deleteTree(pending);
+    if (pending.exists()) {
+      deleteTree(pending);
+      if (pending.exists()) throw new IOException("Cannot clear previous pending restore");
+    }
     if (!staging.getCanonicalFile().equals(pending.getCanonicalFile())) {
       if (!staging.renameTo(pending)) {
         copyTree(staging, pending);
@@ -174,22 +177,27 @@ public final class TdlibBackupSnapshot {
     }
   }
 
-  private static void recoverInterruptedRestore(Context context, File rollback) {
+  private static void recoverInterruptedRestore(Context context, File rollback) throws IOException {
     if (rollback.exists()) {
       File root = context.getDataDir();
       for (String name : DATA_DIRS) {
         File current = new File(root, name);
         File old = new File(rollback, name);
-        if (!current.exists() && old.exists()) old.renameTo(current);
+        if (!current.exists() && old.exists() && !old.renameTo(current)) {
+          throw new IOException("Cannot recover previous " + name + " directory");
+        }
       }
       deleteTree(rollback);
+      if (rollback.exists()) throw new IOException("Cannot clean recovered rollback directory");
     }
     File target = context.getExternalFilesDir(null);
     if (target != null && target.getParentFile() != null) {
       File parent = target.getParentFile();
       File old = new File(parent, target.getName() + ".tgx-restore-old");
       File temp = new File(parent, target.getName() + ".tgx-restore-new");
-      if (!target.exists() && old.exists()) old.renameTo(target);
+      if (!target.exists() && old.exists() && !old.renameTo(target)) {
+        throw new IOException("Cannot recover previous external TDLib files");
+      }
       deleteTree(old);
       deleteTree(temp);
     }
@@ -205,6 +213,7 @@ public final class TdlibBackupSnapshot {
     File old = new File(parent, target.getName() + ".tgx-restore-old");
     deleteTree(temp);
     deleteTree(old);
+    if (temp.exists() || old.exists()) throw new IOException("Cannot prepare external restore directories");
     copyTree(staged, temp);
     if (target.exists() && !target.renameTo(old)) {
       deleteTree(temp);
