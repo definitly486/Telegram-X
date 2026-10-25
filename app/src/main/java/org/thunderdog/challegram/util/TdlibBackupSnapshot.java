@@ -34,6 +34,7 @@ import java.util.List;
 public final class TdlibBackupSnapshot {
   private static final String INTERNAL_ROOT = "internal";
   private static final String EXTERNAL_ROOT = "external";
+  private static final String[] DATA_DIRS = {"files", "shared_prefs", "databases", "no_backup"};
 
   private TdlibBackupSnapshot() {}
 
@@ -55,7 +56,11 @@ public final class TdlibBackupSnapshot {
 
     File internal = new File(staging, INTERNAL_ROOT);
     if (!internal.mkdirs()) throw new IOException("Cannot create internal snapshot directory");
-    copyTree(context.getDataDir(), internal, context.getCacheDir(), context.getCodeCacheDir());
+    // Copy only portable app data. The data root can contain links to APK/native libraries.
+    for (String name : DATA_DIRS) {
+      File source = new File(context.getDataDir(), name);
+      if (source.exists()) copyTree(source, new File(internal, name));
+    }
 
     File externalSource = context.getExternalFilesDir(null);
     if (externalSource != null && externalSource.isDirectory()) {
