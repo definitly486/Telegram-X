@@ -155,6 +155,7 @@ public final class TdlibBackupSnapshot {
       File external = new File(pending, EXTERNAL_ROOT);
       if (external.isDirectory()) replaceExternalTree(context, external, rollback);
 
+      ready.delete();
       deleteTree(pending);
       deleteTree(rollback);
       return true;
