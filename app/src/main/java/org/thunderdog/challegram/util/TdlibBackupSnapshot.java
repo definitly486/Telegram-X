@@ -134,6 +134,7 @@ public final class TdlibBackupSnapshot {
     List<String> installed = new ArrayList<>();
     try {
       if (!internal.isDirectory()) throw new IOException("Missing internal snapshot");
+      recoverInterruptedRestore(context, rollback);
       if (rollback.exists()) deleteTree(rollback);
       if (!rollback.mkdirs()) throw new IOException("Cannot create rollback directory");
 
@@ -173,6 +174,27 @@ public final class TdlibBackupSnapshot {
     }
   }
 
+  private static void recoverInterruptedRestore(Context context, File rollback) {
+    if (rollback.exists()) {
+      File root = context.getDataDir();
+      for (String name : DATA_DIRS) {
+        File current = new File(root, name);
+        File old = new File(rollback, name);
+        if (!current.exists() && old.exists()) old.renameTo(current);
+      }
+      deleteTree(rollback);
+    }
+    File target = context.getExternalFilesDir(null);
+    if (target != null && target.getParentFile() != null) {
+      File parent = target.getParentFile();
+      File old = new File(parent, target.getName() + ".tgx-restore-old");
+      File temp = new File(parent, target.getName() + ".tgx-restore-new");
+      if (!target.exists() && old.exists()) old.renameTo(target);
+      deleteTree(old);
+      deleteTree(temp);
+    }
+  }
+
   private static void replaceExternalTree(Context context, File staged, File rollback)
       throws IOException {
     File target = context.getExternalFilesDir(null);
@@ -206,6 +228,9 @@ public final class TdlibBackupSnapshot {
 
   private static void copyTree(File source, File destination, File... excluded)
       throws IOException {
+    if (!source.getCanonicalPath().equals(source.getAbsolutePath())) {
+      throw new IOException("Symbolic links are not supported in backup data: " + source);
+    }
     if (isExcluded(source, excluded)) return;
     if (source.isDirectory()) {
       if (!destination.exists() && !destination.mkdirs()) {
