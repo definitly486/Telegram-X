@@ -5571,7 +5571,7 @@
   <string name="ExportBackup">Export backup</string>
   <string name="ImportBackup">Import backup</string>
   <string name="BackupPasswordTitle">Backup password</string>
-  <string name="BackupPasswordHint">Enter a strong password (at least 8 characters)</string>
+  <string name="BackupPasswordHint">Enter a strong password (at least 12 characters)</string>
   <string name="BackupExportSuccess">Encrypted backup exported. Telegram X will close; reopen it to continue.</string>
   <string name="BackupExportFailed">Backup failed: %1$s. Telegram X will close to restart TDLib safely.</string>
   <string name="BackupImportPrepared">Backup verified. Force-stop and reopen Telegram X to install the restored data before TDLib starts.</string>
