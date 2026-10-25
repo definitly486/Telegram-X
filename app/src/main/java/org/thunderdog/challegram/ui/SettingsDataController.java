@@ -358,7 +358,7 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
       .setNegativeButton(android.R.string.cancel, null)
       .setPositiveButton(android.R.string.ok, (dialog, which) -> {
         char[] password = passwordInput.getText().toString().toCharArray();
-        if (password.length < 8) {
+        if (password.length < 12) {
           Toast.makeText(context, R.string.BackupPasswordHint, Toast.LENGTH_LONG).show();
           java.util.Arrays.fill(password, (char) 0);
           return;
