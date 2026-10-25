@@ -62,7 +62,7 @@ public final class TdlibBackupSnapshot {
     if (!internal.mkdirs()) throw new IOException("Cannot create internal snapshot directory");
     // Copy only portable app data. The data root can contain links to APK/native libraries.
     for (String name : DATA_DIRS) {
-      File source = new File(context.getDataDir(), name);
+      File source = new File(getDataRoot(context), name);
       if (source.exists()) copyTree(source, new File(internal, name));
     }
 
@@ -226,10 +226,21 @@ public final class TdlibBackupSnapshot {
     file.delete();
   }
 
+  private static File getDataRoot(Context context) {
+    File files = context.getFilesDir();
+    File root = files != null ? files.getParentFile() : null;
+    if (root == null) throw new IllegalStateException("Cannot resolve application data directory");
+    return root;
+  }
+
   private static void copyTree(File source, File destination, File... excluded)
       throws IOException {
-    if (!source.getCanonicalPath().equals(source.getAbsolutePath())) {
-      throw new IOException("Symbolic links are not supported in backup data: " + source);
+    File sourceParent = source.getParentFile();
+    if (sourceParent != null) {
+      File expected = new File(sourceParent.getCanonicalFile(), source.getName());
+      if (!source.getCanonicalFile().equals(expected)) {
+        throw new IOException("Symbolic links are not supported in backup data: " + source);
+      }
     }
     if (isExcluded(source, excluded)) return;
     if (source.isDirectory()) {
