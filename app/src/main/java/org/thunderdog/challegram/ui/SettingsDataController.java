@@ -429,7 +429,7 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
   private void runBackupImport(Uri source, char[] password) {
     Toast.makeText(context, R.string.LoadingInformation, Toast.LENGTH_SHORT).show();
     new Thread(() -> {
-      File staging = new File(context.getDataDir(), ".tgx-backup-import-staging");
+      File staging = new File(context.getFilesDir().getParentFile(), ".tgx-backup-import-staging");
       try {
         deleteBackupTree(staging);
         TdlibBackupSnapshot.SnapshotRoots roots =
