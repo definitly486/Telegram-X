@@ -65,6 +65,8 @@ public final class TdlibBackupArchive {
   private static final int BUFFER_SIZE = 64 * 1024;
   private static final int MAX_ENTRIES = 100_000;
   private static final long MAX_ENTRY_SIZE = 8L * 1024 * 1024 * 1024;
+  // Prevent archives from expanding without bound (including ZIP bombs).
+  private static final long MAX_TOTAL_SIZE = 64L * 1024 * 1024 * 1024;
 
   private TdlibBackupArchive() {}
 
@@ -186,7 +188,7 @@ public final class TdlibBackupArchive {
               while ((count = zip.read(buffer)) != -1) {
                 entryBytes += count;
                 totalBytes += count;
-                if (entryBytes > MAX_ENTRY_SIZE || totalBytes < 0) {
+                if (entryBytes > MAX_ENTRY_SIZE || totalBytes > MAX_TOTAL_SIZE || totalBytes < 0) {
                   throw new IOException("Archive size limit exceeded");
                 }
                 out.write(buffer, 0, count);
