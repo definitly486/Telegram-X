@@ -27,7 +27,7 @@ jobs:
         with:
           ref: ${{ github.ref }}
           submodules: recursive
-          fetch-depth: 0
+          fetch-depth: 1
           lfs: true
 
       - name: Set up Java
