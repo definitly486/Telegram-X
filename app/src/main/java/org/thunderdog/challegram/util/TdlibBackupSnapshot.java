@@ -55,8 +55,7 @@ public final class TdlibBackupSnapshot {
 
     File internal = new File(staging, INTERNAL_ROOT);
     if (!internal.mkdirs()) throw new IOException("Cannot create internal snapshot directory");
-    copyTree(context.getDataDir(), internal, context.getCacheDir(), context.getCodeCacheDir(),
-        context.getNoBackupFilesDir());
+    copyTree(context.getDataDir(), internal, context.getCacheDir(), context.getCodeCacheDir());
 
     File externalSource = context.getExternalFilesDir(null);
     if (externalSource != null && externalSource.isDirectory()) {
