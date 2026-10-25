@@ -379,12 +379,11 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
         // before copying any files. Never silently export if one account did not close.
         List<org.thunderdog.challegram.telegram.TdlibAccount> accounts =
           new java.util.ArrayList<>(TdlibManager.instance().getActiveAccounts());
-        CountDownLatch closed = new CountDownLatch(0);
         List<org.thunderdog.challegram.telegram.TdlibAccount> initialized = new java.util.ArrayList<>();
         for (org.thunderdog.challegram.telegram.TdlibAccount account : accounts) {
           if (account.hasTdlib(false)) initialized.add(account);
         }
-        closed = new CountDownLatch(initialized.size());
+        final CountDownLatch closed = new CountDownLatch(initialized.size());
         AtomicReference<Throwable> closeError = new AtomicReference<>();
         for (org.thunderdog.challegram.telegram.TdlibAccount account : initialized) {
           pausedAccounts.add(account);
