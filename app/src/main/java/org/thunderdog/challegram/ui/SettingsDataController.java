@@ -335,6 +335,135 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
     }
   }
 
+
+  @Override
+  public void onActivityResult (int requestCode, int resultCode, Intent data) {
+    if (resultCode != android.app.Activity.RESULT_OK || data == null || data.getData() == null) return;
+    if (requestCode == REQUEST_EXPORT_BACKUP) {
+      requestBackupPassword(true, data.getData());
+    } else if (requestCode == REQUEST_IMPORT_BACKUP) {
+      requestBackupPassword(false, data.getData());
+    }
+  }
+
+  private void requestBackupPassword(boolean export, Uri uri) {
+    EditText passwordInput = new EditText(context);
+    passwordInput.setSingleLine(true);
+    passwordInput.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+    passwordInput.setHint(R.string.BackupPasswordHint);
+    new AlertDialog.Builder(context)
+      .setTitle(export ? R.string.ExportBackup : R.string.ImportBackup)
+      .setView(passwordInput)
+      .setNegativeButton(android.R.string.cancel, null)
+      .setPositiveButton(android.R.string.ok, (dialog, which) -> {
+        char[] password = passwordInput.getText().toString().toCharArray();
+        if (password.length < 8) {
+          Toast.makeText(context, R.string.BackupPasswordHint, Toast.LENGTH_LONG).show();
+          java.util.Arrays.fill(password, '\\0');
+          return;
+        }
+        if (export) runBackupExport(uri, password);
+        else runBackupImport(uri, password);
+      })
+      .show();
+  }
+
+  private void runBackupExport(Uri destination, char[] password) {
+    Toast.makeText(context, R.string.LoadingInformation, Toast.LENGTH_SHORT).show();
+    new Thread(() -> {
+      File staging = new File(context.getCacheDir(), "tgx-backup-export-staging");
+      List<org.thunderdog.challegram.telegram.TdlibAccount> pausedAccounts = new java.util.ArrayList<>();
+      try {
+        deleteBackupTree(staging);
+        // Send Close to every initialized account and wait for TDLib to finish closing its DB
+        // before copying any files. Never silently export if one account did not close.
+        List<org.thunderdog.challegram.telegram.TdlibAccount> accounts =
+          new java.util.ArrayList<>(TdlibManager.instance().getActiveAccounts());
+        CountDownLatch closed = new CountDownLatch(0);
+        List<org.thunderdog.challegram.telegram.TdlibAccount> initialized = new java.util.ArrayList<>();
+        for (org.thunderdog.challegram.telegram.TdlibAccount account : accounts) {
+          if (account.hasTdlib(false)) initialized.add(account);
+        }
+        closed = new CountDownLatch(initialized.size());
+        AtomicReference<Throwable> closeError = new AtomicReference<>();
+        for (org.thunderdog.challegram.telegram.TdlibAccount account : initialized) {
+          pausedAccounts.add(account);
+          try {
+            account.tdlibNoWakeup().client().send(new TdApi.Close(), object -> {
+              if (!(object instanceof TdApi.Ok)) {
+                closeError.compareAndSet(null, new IOException("TDLib did not close cleanly: " + object));
+              }
+              closed.countDown();
+            });
+          } catch (Throwable t) {
+            closeError.compareAndSet(null, t);
+            closed.countDown();
+          }
+        }
+        if (!closed.await(90, TimeUnit.SECONDS)) {
+          throw new IOException("Timed out waiting for TDLib databases to close");
+        }
+        if (closeError.get() != null) throw new IOException("Could not safely close all TDLib accounts", closeError.get());
+
+        TdlibBackupSnapshot.createSnapshot(context, staging);
+        TdlibBackupArchive.exportDirectory(context, staging, destination, password);
+        new Handler(Looper.getMainLooper()).post(() ->
+          Toast.makeText(context, R.string.BackupExportSuccess, Toast.LENGTH_LONG).show());
+      } catch (Throwable error) {
+        android.util.Log.e("TGXBackup", "Backup export failed", error);
+        String message = error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName();
+        new Handler(Looper.getMainLooper()).post(() ->
+          Toast.makeText(context, context.getString(R.string.BackupFailed, message), Toast.LENGTH_LONG).show());
+      } finally {
+        java.util.Arrays.fill(password, '\\0');
+        deleteBackupTree(staging);
+        // Recreate/wake every client that was deliberately closed for the consistent snapshot.
+        for (org.thunderdog.challegram.telegram.TdlibAccount account : pausedAccounts) {
+          try { account.tdlib(); } catch (Throwable t) {
+            android.util.Log.e("TGXBackup", "Unable to restart TDLib after backup", t);
+          }
+        }
+      }
+    }, "TGX-Backup-Export").start();
+  }
+
+  private void runBackupImport(Uri source, char[] password) {
+    Toast.makeText(context, R.string.LoadingInformation, Toast.LENGTH_SHORT).show();
+    new Thread(() -> {
+      File staging = new File(context.getDataDir(), ".tgx-backup-import-staging");
+      try {
+        deleteBackupTree(staging);
+        TdlibBackupSnapshot.SnapshotRoots roots =
+          TdlibBackupSnapshot.validateArchive(context, source, staging, password);
+        if (!roots.hasAccountConfig) {
+          throw new IOException(Lang.getString(R.string.BackupWrongStructure));
+        }
+        TdlibBackupSnapshot.markPendingRestore(context, staging);
+        new Handler(Looper.getMainLooper()).post(() ->
+          Toast.makeText(context, R.string.BackupImportPrepared, Toast.LENGTH_LONG).show());
+      } catch (Throwable error) {
+        android.util.Log.e("TGXBackup", "Backup import failed", error);
+        String message = error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName();
+        new Handler(Looper.getMainLooper()).post(() ->
+          Toast.makeText(context, context.getString(R.string.BackupFailed, message), Toast.LENGTH_LONG).show());
+        deleteBackupTree(staging);
+      } finally {
+        java.util.Arrays.fill(password, '\\0');
+      }
+    }, "TGX-Backup-Import").start();
+  }
+
+  private static void deleteBackupTree(File file) {
+    if (file == null || !file.exists()) return;
+    if (file.isDirectory()) {
+      File[] children = file.listFiles();
+      if (children != null) for (File child : children) deleteBackupTree(child);
+    }
+    if (!file.delete() && file.exists()) {
+      android.util.Log.w("TGXBackup", "Unable to delete temporary backup path: " + file);
+    }
+  }
+
   @Override
   public void destroy () {
     super.destroy();
