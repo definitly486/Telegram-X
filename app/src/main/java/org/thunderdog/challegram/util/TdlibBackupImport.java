@@ -49,7 +49,7 @@ public final class TdlibBackupImport {
             Arrays.fill(password, '\0');
             return;
           }
-          runImport(context.getApplicationContext(), source, password);
+          runImport(context, source, password);
         })
         .show();
   }
