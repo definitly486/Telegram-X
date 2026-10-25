@@ -43,11 +43,7 @@ jobs:
           git lfs install
           git lfs pull
 
-      - name: Set up Telegram X native dependencies and Android SDK
-        run: bash scripts/setup.sh
-
-      - name: Configure release signing
-        if: env.SIGNING_CONFIGURED == 'true'
+      - name: Prepare signing configuration
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -55,21 +51,44 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           mkdir -p "$RUNNER_TEMP/signing"
-          echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/signing/release.jks"
-          cat > keystore.properties <<EOF
+          if [ "$SIGNING_CONFIGURED" = "true" ]; then
+            echo "$KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/signing/release.jks"
+            cat > "$RUNNER_TEMP/signing/keystore.properties" <<EOF
           keystore.file=$RUNNER_TEMP/signing/release.jks
           keystore.password=$KEYSTORE_PASSWORD
           key.alias=$KEY_ALIAS
           key.password=$KEY_PASSWORD
           EOF
+          else
+            : > "$RUNNER_TEMP/signing/keystore.properties"
+          fi
 
-      - name: Build signed release APK
-        if: env.SIGNING_CONFIGURED == 'true'
-        run: ./gradlew --no-daemon --stacktrace assembleUniversalRelease
+      - name: Set up Telegram X native dependencies and Android SDK
+        env:
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+          KEYSTORE_FILE: ${{ runner.temp }}/signing/keystore.properties
+          APP_ID: org.thunderdog.challegram
+          APP_NAME: Telegram X
+          APP_DOWNLOAD_URL: https://github.com/definitly486/Telegram-X/releases
+          APP_SOURCES_URL: https://github.com/definitly486/Telegram-X
+        run: |
+          if [ -z "$TELEGRAM_API_ID" ] || [ -z "$TELEGRAM_API_HASH" ]; then
+            echo "::error::Add TELEGRAM_API_ID and TELEGRAM_API_HASH repository secrets before building."
+            exit 1
+          fi
+          bash scripts/setup.sh --default-sdk-root
+          if [ "$SIGNING_CONFIGURED" != "true" ]; then
+            printf '\napp.disable_signing=true\n' >> local.properties
+          fi
 
-      - name: Build installable debug APK (signing secrets not configured)
-        if: env.SIGNING_CONFIGURED != 'true'
-        run: ./gradlew --no-daemon --stacktrace assembleUniversalDebug
+      - name: Build universal release APK
+        run: |
+          if [ "$SIGNING_CONFIGURED" = "true" ]; then
+            ./gradlew --no-daemon --stacktrace assembleUniversalRelease
+          else
+            ./gradlew --no-daemon --stacktrace assembleUniversalRelease assembleUniversalDebug
+          fi
 
       - name: Collect APKs
         shell: bash
