@@ -378,7 +378,7 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
         // Send Close to every initialized account and wait for TDLib to finish closing its DB
         // before copying any files. Never silently export if one account did not close.
         List<org.thunderdog.challegram.telegram.TdlibAccount> accounts =
-          new java.util.ArrayList<>(TdlibManager.instance().getActiveAccounts());
+          new java.util.ArrayList<>(TdlibManager.instance().getAccountsForBackup());
         List<org.thunderdog.challegram.telegram.TdlibAccount> initialized = new java.util.ArrayList<>();
         for (org.thunderdog.challegram.telegram.TdlibAccount account : accounts) {
           if (account.hasTdlib(false)) initialized.add(account);
