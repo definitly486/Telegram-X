@@ -5567,4 +5567,13 @@
   <string name="xBotUsers_one">%1$s monthly user</string>
   <string name="xBotUsers_other">%1$s monthly users</string>
 
+  <string name="BackupAndRestore">Backup and restore</string>
+  <string name="ExportBackup">Export backup</string>
+  <string name="ImportBackup">Import backup</string>
+  <string name="BackupPasswordTitle">Backup password</string>
+  <string name="BackupPasswordHint">Enter a strong password (at least 8 characters)</string>
+  <string name="BackupExportSuccess">Encrypted backup exported</string>
+  <string name="BackupImportPrepared">Backup verified. Force-stop and reopen Telegram X to install the restored data before TDLib starts.</string>
+  <string name="BackupWrongStructure">The archive does not contain Telegram X account configuration. Import cancelled.</string>
+  <string name="BackupFailed">Backup operation failed: %1$s</string>
 </resources>
