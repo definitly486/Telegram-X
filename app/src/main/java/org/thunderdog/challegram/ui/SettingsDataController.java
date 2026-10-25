@@ -19,6 +19,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.text.InputType;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -369,7 +370,11 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
   }
 
   private void runBackupExport(Uri destination, char[] password) {
-    Toast.makeText(context, R.string.LoadingInformation, Toast.LENGTH_SHORT).show();
+    ProgressDialog progress = new ProgressDialog(context);
+    progress.setIndeterminate(true);
+    progress.setCancelable(false);
+    progress.setMessage(Lang.getString(R.string.LoadingInformation));
+    progress.show();
     new Thread(() -> {
       File staging = new File(context.getCacheDir(), "tgx-backup-export-staging");
       List<org.thunderdog.challegram.telegram.TdlibAccount> pausedAccounts = new java.util.ArrayList<>();
@@ -406,13 +411,17 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
 
         TdlibBackupSnapshot.createSnapshot(context, staging);
         TdlibBackupArchive.exportDirectory(context, staging, destination, password);
-        new Handler(Looper.getMainLooper()).post(() ->
-          Toast.makeText(context, R.string.BackupExportSuccess, Toast.LENGTH_LONG).show());
+        new Handler(Looper.getMainLooper()).post(() -> {
+          if (progress.isShowing()) progress.dismiss();
+          Toast.makeText(context, R.string.BackupExportSuccess, Toast.LENGTH_LONG).show();
+        });
       } catch (Throwable error) {
         android.util.Log.e("TGXBackup", "Backup export failed", error);
         String message = error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName();
-        new Handler(Looper.getMainLooper()).post(() ->
-          Toast.makeText(context, context.getString(R.string.BackupFailed, message), Toast.LENGTH_LONG).show());
+        new Handler(Looper.getMainLooper()).post(() -> {
+          if (progress.isShowing()) progress.dismiss();
+          Toast.makeText(context, context.getString(R.string.BackupFailed, message), Toast.LENGTH_LONG).show();
+        });
       } finally {
         java.util.Arrays.fill(password, '\\0');
         deleteBackupTree(staging);
@@ -427,7 +436,11 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
   }
 
   private void runBackupImport(Uri source, char[] password) {
-    Toast.makeText(context, R.string.LoadingInformation, Toast.LENGTH_SHORT).show();
+    ProgressDialog progress = new ProgressDialog(context);
+    progress.setIndeterminate(true);
+    progress.setCancelable(false);
+    progress.setMessage(Lang.getString(R.string.LoadingInformation));
+    progress.show();
     new Thread(() -> {
       File staging = new File(context.getFilesDir().getParentFile(), ".tgx-backup-import-staging");
       try {
@@ -438,13 +451,17 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
           throw new IOException(Lang.getString(R.string.BackupWrongStructure));
         }
         TdlibBackupSnapshot.markPendingRestore(context, staging);
-        new Handler(Looper.getMainLooper()).post(() ->
-          Toast.makeText(context, R.string.BackupImportPrepared, Toast.LENGTH_LONG).show());
+        new Handler(Looper.getMainLooper()).post(() -> {
+          if (progress.isShowing()) progress.dismiss();
+          Toast.makeText(context, R.string.BackupImportPrepared, Toast.LENGTH_LONG).show();
+        });
       } catch (Throwable error) {
         android.util.Log.e("TGXBackup", "Backup import failed", error);
         String message = error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName();
-        new Handler(Looper.getMainLooper()).post(() ->
-          Toast.makeText(context, context.getString(R.string.BackupFailed, message), Toast.LENGTH_LONG).show());
+        new Handler(Looper.getMainLooper()).post(() -> {
+          if (progress.isShowing()) progress.dismiss();
+          Toast.makeText(context, context.getString(R.string.BackupFailed, message), Toast.LENGTH_LONG).show();
+        });
         deleteBackupTree(staging);
       } finally {
         java.util.Arrays.fill(password, '\\0');
