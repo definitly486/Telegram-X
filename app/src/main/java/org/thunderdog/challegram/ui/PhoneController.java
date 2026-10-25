@@ -16,6 +16,8 @@ package org.thunderdog.challegram.ui;
 
 import android.app.AlertDialog;
 import android.content.Context;
+import android.content.Intent;
+import android.app.Activity;
 import android.net.Uri;
 import android.os.Build;
 import android.text.InputFilter;
@@ -48,6 +50,7 @@ import org.thunderdog.challegram.config.Config;
 import org.thunderdog.challegram.core.Background;
 import org.thunderdog.challegram.core.Lang;
 import org.thunderdog.challegram.data.TD;
+import org.thunderdog.challegram.navigation.ActivityResultHandler;
 import org.thunderdog.challegram.navigation.BackHeaderButton;
 import org.thunderdog.challegram.navigation.HeaderView;
 import org.thunderdog.challegram.navigation.Menu;
@@ -66,6 +69,7 @@ import org.thunderdog.challegram.tool.TGPhoneFormat;
 import org.thunderdog.challegram.tool.UI;
 import org.thunderdog.challegram.tool.Views;
 import org.thunderdog.challegram.util.CustomTypefaceSpan;
+import org.thunderdog.challegram.util.TdlibBackupImport;
 import org.thunderdog.challegram.util.NoUnderlineClickableSpan;
 import org.thunderdog.challegram.util.StringList;
 import org.thunderdog.challegram.widget.MaterialEditTextGroup;
@@ -82,7 +86,7 @@ import me.vkryl.core.collection.IntList;
 import me.vkryl.core.lambda.RunnableBool;
 import tgx.td.Td;
 
-public class PhoneController extends EditBaseController<Void> implements SettingsAdapter.TextChangeListener, MaterialEditTextGroup.FocusListener, MaterialEditTextGroup.TextChangeListener, View.OnClickListener, Menu {
+public class PhoneController extends EditBaseController<Void> implements SettingsAdapter.TextChangeListener, MaterialEditTextGroup.FocusListener, MaterialEditTextGroup.TextChangeListener, View.OnClickListener, Menu, ActivityResultHandler {
 
   public static final int MODE_LOGIN = 0;
   public static final int MODE_CHANGE_NUMBER = 1;
@@ -204,6 +208,8 @@ public class PhoneController extends EditBaseController<Void> implements Setting
     this.initialFirstName = firstName;
     this.initialLastName = lastName;
   }
+
+  private static final int REQUEST_IMPORT_BACKUP_BEFORE_LOGIN = 48212;
 
   private SettingsAdapter adapter;
   private ArrayList<ListItem> baseItems;
@@ -341,6 +347,9 @@ public class PhoneController extends EditBaseController<Void> implements Setting
     hintItem = new ListItem(ListItem.TYPE_DESCRIPTION, 0, 0, mode == MODE_ADD_CONTACT ? 0 : mode == MODE_CHANGE_NUMBER ? R.string.ChangePhoneHelp : R.string.login_SmsHint).setTextColorId(ColorId.textLight);
     if (mode != MODE_ADD_CONTACT) {
       this.baseItems.add(hintItem);
+    }
+    if (mode == MODE_LOGIN) {
+      this.baseItems.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_importTdlibBackup, R.drawable.baseline_import_export_24, R.string.ImportBackup));
     }
 
     if (isAccountAdd) {
@@ -547,11 +556,24 @@ public class PhoneController extends EditBaseController<Void> implements Setting
     final int viewId = v.getId();
     if (viewId == R.id.btn_syncContacts) {
       adapter.toggleView(v);
+    } else if (viewId == R.id.btn_importTdlibBackup && mode == MODE_LOGIN) {
+      Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+      intent.addCategory(Intent.CATEGORY_OPENABLE);
+      intent.setType("*/*");
+      intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+      UI.startActivityForResult(intent, REQUEST_IMPORT_BACKUP_BEFORE_LOGIN);
     } else if (viewId == R.id.result) {
       ListItem item = (ListItem) v.getTag();
       if (item != null && item.getData() != null) {
         setCountry(item);
       }
+    }
+  }
+
+  @Override
+  public void onActivityResult (int requestCode, int resultCode, Intent data) {
+    if (requestCode == REQUEST_IMPORT_BACKUP_BEFORE_LOGIN && resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
+      TdlibBackupImport.requestPasswordAndImport(context, data.getData());
     }
   }
 
