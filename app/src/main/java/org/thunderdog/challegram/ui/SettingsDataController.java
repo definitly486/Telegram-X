@@ -16,6 +16,14 @@ package org.thunderdog.challegram.ui;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.app.AlertDialog;
+import android.text.InputType;
+import android.widget.EditText;
+import android.widget.Toast;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.Bundle;
 import android.util.SparseIntArray;
 import android.view.View;
@@ -31,6 +39,7 @@ import org.thunderdog.challegram.core.Lang;
 import org.thunderdog.challegram.data.TGNetworkStats;
 import org.thunderdog.challegram.data.TGStorageStatsFast;
 import org.thunderdog.challegram.navigation.BackHeaderButton;
+import org.thunderdog.challegram.navigation.ActivityResultHandler;
 import org.thunderdog.challegram.navigation.DoubleHeaderView;
 import org.thunderdog.challegram.navigation.SettingsWrapBuilder;
 import org.thunderdog.challegram.navigation.ViewController;
@@ -39,17 +48,24 @@ import org.thunderdog.challegram.telegram.Tdlib;
 import org.thunderdog.challegram.telegram.TdlibFilesManager;
 import org.thunderdog.challegram.telegram.TdlibManager;
 import org.thunderdog.challegram.theme.ColorId;
+import org.thunderdog.challegram.util.TdlibBackupArchive;
+import org.thunderdog.challegram.util.TdlibBackupSnapshot;
 import org.thunderdog.challegram.tool.UI;
 import org.thunderdog.challegram.unsorted.Settings;
 import org.thunderdog.challegram.v.CustomRecyclerView;
 import org.thunderdog.challegram.voip.annotation.DataSavingOption;
 
 import java.util.List;
+import java.io.File;
+import java.io.IOException;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 
 import me.vkryl.core.ArrayUtils;
 
 public class SettingsDataController extends RecyclerViewController<SettingsDataController.Args> implements View.OnClickListener, ViewController.SettingsIntDelegate,
-  GlobalConnectionListener, Client.ResultHandler, Settings.ProxyChangeListener {
+  GlobalConnectionListener, Client.ResultHandler, Settings.ProxyChangeListener, ActivityResultHandler {
   public static class Args {
     public int mode;
     public Object data;
@@ -128,6 +144,8 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
     return BackHeaderButton.TYPE_BACK;
   }
 
+  private static final int REQUEST_EXPORT_BACKUP = 48210;
+  private static final int REQUEST_IMPORT_BACKUP = 48211;
   private SettingsAdapter adapter;
 
   private View headerCell;
@@ -242,6 +260,13 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
       };
     } else {
       rawItems = new ListItem[] {
+        new ListItem(ListItem.TYPE_HEADER, 0, 0, R.string.BackupAndRestore),
+        new ListItem(ListItem.TYPE_SHADOW_TOP),
+        new ListItem(ListItem.TYPE_SETTING, R.id.btn_exportTdlibBackup, R.drawable.baseline_file_upload_24, R.string.ExportBackup),
+        new ListItem(ListItem.TYPE_SEPARATOR_FULL),
+        new ListItem(ListItem.TYPE_SETTING, R.id.btn_importTdlibBackup, R.drawable.baseline_file_download_24, R.string.ImportBackup),
+        new ListItem(ListItem.TYPE_SHADOW_BOTTOM),
+        new ListItem(ListItem.TYPE_SHADOW_TOP),
         new ListItem(ListItem.TYPE_VALUED_SETTING, R.id.btn_storageUsage, R.drawable.baseline_data_usage_24, R.string.StorageUsage),
         new ListItem(ListItem.TYPE_SEPARATOR_FULL),
         new ListItem(ListItem.TYPE_VALUED_SETTING, R.id.btn_dataUsageTotal, R.drawable.baseline_import_export_24, R.string.NetworkUsage),
@@ -451,7 +476,19 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
     final int id = v.getId();
     final boolean toggleResult = adapter.toggleView(v);
 
-    if (id == R.id.btn_resetNetworkStats) {
+    if (id == R.id.btn_exportTdlibBackup) {
+      Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+      intent.addCategory(Intent.CATEGORY_OPENABLE);
+      intent.setType("application/octet-stream");
+      intent.putExtra(Intent.EXTRA_TITLE, "TelegramX-backup.tgx");
+      UI.startActivityForResult(intent, REQUEST_EXPORT_BACKUP);
+    } else if (id == R.id.btn_importTdlibBackup) {
+      Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+      intent.addCategory(Intent.CATEGORY_OPENABLE);
+      intent.setType("*/*");
+      intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+      UI.startActivityForResult(intent, REQUEST_IMPORT_BACKUP);
+    } else if (id == R.id.btn_resetNetworkStats) {
       showOptions(Lang.getString(R.string.ResetStatsHint), new int[] {R.id.btn_delete, R.id.btn_cancel}, new String[] {Lang.getString(R.string.Reset), Lang.getString(R.string.Cancel)}, new int[] {OptionColor.RED, OptionColor.NORMAL}, new int[] {R.drawable.baseline_delete_forever_24, R.drawable.baseline_cancel_24}, (itemView, optionId) -> {
         if (optionId == R.id.btn_delete) {
           tdlib.client().send(new TdApi.ResetNetworkStatistics(), object -> {
