@@ -360,7 +360,7 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
         char[] password = passwordInput.getText().toString().toCharArray();
         if (password.length < 8) {
           Toast.makeText(context, R.string.BackupPasswordHint, Toast.LENGTH_LONG).show();
-          java.util.Arrays.fill(password, '\\0');
+          java.util.Arrays.fill(password, (char) 0);
           return;
         }
         if (export) runBackupExport(uri, password);
@@ -424,7 +424,7 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
           Toast.makeText(context, context.getString(errorString, message), Toast.LENGTH_LONG).show();
         });
       } finally {
-        java.util.Arrays.fill(password, '\\0');
+        java.util.Arrays.fill(password, (char) 0);
         deleteBackupTree(staging);
         // Do not reopen databases in this process: the snapshot must remain quiescent after
         // copying. Restarting the app creates fresh TDLib clients from the copied files.
@@ -465,7 +465,7 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
         });
         deleteBackupTree(staging);
       } finally {
-        java.util.Arrays.fill(password, '\\0');
+        java.util.Arrays.fill(password, (char) 0);
       }
     }, "TGX-Backup-Import").start();
   }
