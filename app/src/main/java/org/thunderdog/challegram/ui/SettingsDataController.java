@@ -370,6 +370,8 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
   }
 
   private void runBackupExport(Uri destination, char[] password) {
+    List<org.thunderdog.challegram.telegram.TdlibAccount> accountsForBackup =
+      new java.util.ArrayList<>(TdlibManager.instance().getAccountsForBackup());
     ProgressDialog progress = new ProgressDialog(context);
     progress.setIndeterminate(true);
     progress.setCancelable(false);
@@ -382,10 +384,8 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
         deleteBackupTree(staging);
         // Send Close to every initialized account and wait for TDLib to finish closing its DB
         // before copying any files. Never silently export if one account did not close.
-        List<org.thunderdog.challegram.telegram.TdlibAccount> accounts =
-          new java.util.ArrayList<>(TdlibManager.instance().getAccountsForBackup());
         List<org.thunderdog.challegram.telegram.TdlibAccount> initialized = new java.util.ArrayList<>();
-        for (org.thunderdog.challegram.telegram.TdlibAccount account : accounts) {
+        for (org.thunderdog.challegram.telegram.TdlibAccount account : accountsForBackup) {
           if (account.hasTdlib(false)) initialized.add(account);
         }
         final CountDownLatch closed = new CountDownLatch(initialized.size());
@@ -420,7 +420,8 @@ public class SettingsDataController extends RecyclerViewController<SettingsDataC
         String message = error.getMessage() != null ? error.getMessage() : error.getClass().getSimpleName();
         new Handler(Looper.getMainLooper()).post(() -> {
           if (progress.isShowing()) progress.dismiss();
-          Toast.makeText(context, context.getString(R.string.BackupFailed, message), Toast.LENGTH_LONG).show();
+          int errorString = pausedAccounts.isEmpty() ? R.string.BackupFailed : R.string.BackupExportFailed;
+          Toast.makeText(context, context.getString(errorString, message), Toast.LENGTH_LONG).show();
         });
       } finally {
         java.util.Arrays.fill(password, '\\0');
