@@ -9682,7 +9682,7 @@ public class MessagesController extends ViewController<MessagesController.Argume
     }
     switch (requestCode) {
       case Intents.ACTIVITY_RESULT_RESOLUTION: {
-        getCurrentLocation(currentShareLocationDestroyKeyboard, googleClient);
+        shareCurrentLocationViaManager(currentShareLocationDestroyKeyboard);
         break;
       }
       case Intents.ACTIVITY_RESULT_IMAGE_CAPTURE:
