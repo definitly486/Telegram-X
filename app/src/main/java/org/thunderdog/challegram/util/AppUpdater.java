@@ -71,11 +71,13 @@ public class AppUpdater implements FileUpdateListener, ConnectionListener {
   @IntDef({
     FlowType.NONE,
     FlowType.TELEGRAM_CHANNEL,
+    FlowType.GOOGLE_PLAY
   })
   public @interface FlowType {
     int
       NONE = 0,
-      TELEGRAM_CHANNEL = 1;
+      TELEGRAM_CHANNEL = 1,
+      GOOGLE_PLAY = 2;
   }
 
   private final BaseActivity context;
