@@ -400,7 +400,6 @@ dependencies {
   implementation("com.google.android.gms:play-services-basement:17.6.0")
   implementation("com.google.android.gms:play-services-maps:17.0.1")
   implementation("com.google.android.gms:play-services-location:18.0.0")
-  implementation("com.google.android.gms:play-services-mlkit-barcode-scanning:16.2.1")
   implementation("com.google.android.gms:play-services-safetynet:18.0.1")
   // implementation("com.google.firebase:firebase-appcheck-safetynet:16.1.2")
   // Play Integrity: https://developer.android.com/google/play/integrity/reference/com/google/android/play/core/release-notes
