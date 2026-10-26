@@ -65,7 +65,13 @@ jobs:
           distribution: temurin
           java-version: 17
 
+      # The repo ships an old (Gradle 1.6 era) bootstrap gradle-wrapper.jar that the wrapper
+      # validator does not recognise. Instead of running it, install Gradle 8.13
+      # (the version from gradle-wrapper.properties) and call `gradle` directly.
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.13"
+          validate-wrappers: false
 
       - name: Install tools
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends git-lfs wget unzip make yasm nasm
@@ -123,7 +129,7 @@ jobs:
         run: |
           task="assemble$(tr '[:lower:]' '[:upper:]' <<< "${FLAVOR:0:1}")${FLAVOR:1}Debug"
           echo "Running :app:$task"
-          ./gradlew ":app:$task" --stacktrace --console=plain
+          gradle ":app:$task" --stacktrace --console=plain
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
