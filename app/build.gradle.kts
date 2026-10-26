@@ -407,7 +407,6 @@ dependencies {
   // ReCaptcha: https://cloud.google.com/recaptcha/docs/release-notes
   implementation("com.google.android.recaptcha:recaptcha:18.4.0") // 18.5.0+ requires minSdkVersion 21
   // Play In-App Updates: https://developer.android.com/reference/com/google/android/play/core/release-notes-in_app_updates
-  implementation("com.google.android.play:app-update:2.1.0")
   // AndroidX/media: https://github.com/androidx/media/blob/release/RELEASENOTES.md
   implementation("androidx.media3:media3-exoplayer:${LibraryVersions.ANDROIDX_MEDIA}")
   implementation("androidx.media3:media3-transformer:${LibraryVersions.ANDROIDX_MEDIA}")
