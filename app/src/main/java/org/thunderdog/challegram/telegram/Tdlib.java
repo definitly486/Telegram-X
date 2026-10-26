@@ -36,14 +36,6 @@ import androidx.collection.SparseArrayCompat;
 import androidx.core.os.CancellationSignal;
 import androidx.core.util.Pair;
 
-import com.google.android.gms.tasks.Task;
-import com.google.android.play.core.integrity.IntegrityManager;
-import com.google.android.play.core.integrity.IntegrityManagerFactory;
-import com.google.android.play.core.integrity.IntegrityTokenRequest;
-import com.google.android.play.core.integrity.IntegrityTokenResponse;
-import com.google.android.recaptcha.RecaptchaAction;
-import com.google.android.recaptcha.RecaptchaTasksClient;
-import com.google.firebase.FirebaseOptions;
 
 import org.drinkless.tdlib.Client;
 import org.drinkless.tdlib.TdApi;
@@ -129,7 +121,6 @@ import me.vkryl.core.lambda.RunnableData;
 import me.vkryl.core.lambda.RunnableInt;
 import me.vkryl.core.lambda.RunnableLong;
 import me.vkryl.core.util.ConditionalExecutor;
-import tgx.app.RecaptchaProviderRegistry;
 import tgx.td.ChatId;
 import tgx.td.ChatPosition;
 import tgx.td.JSON;
@@ -8945,65 +8936,13 @@ public class Tdlib implements TdlibProvider, Settings.SettingsChangeListener, Da
   }
 
   public void requestPlayIntegrity (long verificationId, String nonce, IntegrityCallback callback) {
-    TDLib.Tag.playIntegrity("Received Play Integrity request verificationId=%d", verificationId);
-    RunnableData<Exception> onError = e -> {
-      TDLib.Tag.playIntegrity("failure verificationId=%d: %s", verificationId, Log.toString(e));
-      final String error = Log.toErrorString(e);
-      callback.onIntegrityResult(error, true);
-    };
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
-      onError.runWithData(new IllegalStateException("SDK_LEVEL_TOO_LOW: " + Build.VERSION.SDK_INT));
-      return;
-    }
-    try {
-      FirebaseOptions options = FirebaseOptions.fromResource(UI.getAppContext());
-      String projectIdRaw = options != null ? options.getGcmSenderId() : "";
-      if (StringUtils.isEmpty(projectIdRaw)) {
-        onError.runWithData(new IllegalStateException("PLAY_SERVICES_PROJECT_NUMBER_UNKNOWN"));
-        return;
-      }
-      long projectId = Long.parseLong(projectIdRaw);
-      IntegrityTokenRequest request = IntegrityTokenRequest.builder()
-        .setNonce(nonce)
-        .setCloudProjectNumber(projectId)
-        .build();
-      IntegrityManager integrityManager = IntegrityManagerFactory.create(UI.getAppContext());
-      Task<IntegrityTokenResponse> integrityTokenResponse = integrityManager.requestIntegrityToken(request);
-      integrityTokenResponse
-        .addOnSuccessListener(r -> {
-          final String token = r.token();
-          TDLib.Tag.playIntegrity("success verificationId=%d: %s", verificationId, token);
-          final String result = token != null ? token : "PLAYINTEGRITY_FAILED_EXCEPTION_NULL";
-          callback.onIntegrityResult(result, token != null);
-        })
-        .addOnFailureListener(onError::runWithData);
-    } catch (Exception e) {
-      onError.runWithData(e);
-    }
+    TDLib.Tag.playIntegrity("Play Integrity is unavailable in this build, verificationId=%d", verificationId);
+    callback.onIntegrityResult("PLAY_INTEGRITY_UNAVAILABLE", true);
   }
 
   public void requestRecaptcha (long verificationId, String action, String recaptchaKeyId, IntegrityCallback callback) {
-    TDLib.Tag.recaptcha("Received ReCaptcha request verificationId=%d action=%s", verificationId, action);
-    RunnableData<Exception> onError = e -> {
-      final String error = Log.toErrorString(e);
-      callback.onIntegrityResult(error, true);
-    };
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.KITKAT) {
-      onError.runWithData(new IllegalStateException("SDK_LEVEL_TOO_LOW: " + Build.VERSION.SDK_INT));
-      return;
-    }
-    RunnableData<RecaptchaTasksClient> actor = client -> {
-      client.executeTask(RecaptchaAction.custom(action))
-        .addOnSuccessListener(token -> {
-          TDLib.Tag.recaptcha("success verificationId=%d", verificationId);
-          callback.onIntegrityResult(token, false);
-        })
-        .addOnFailureListener(error -> {
-          TDLib.Tag.recaptcha("failure verificationId=%d: %s", verificationId, Log.toString(error));
-          onError.runWithData(error);
-        });
-    };
-    RecaptchaProviderRegistry.INSTANCE.execute(recaptchaKeyId, actor, onError);
+    TDLib.Tag.recaptcha("ReCaptcha is unavailable in this build, verificationId=%d", verificationId);
+    callback.onIntegrityResult("RECAPTCHA_UNAVAILABLE", true);
   }
 
   @TdlibThread
