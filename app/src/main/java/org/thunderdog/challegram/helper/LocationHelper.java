@@ -497,7 +497,6 @@ public class LocationHelper implements ActivityResultHandler {
 
   public static Location getLastKnownLocation (Context context, boolean allowGoogleClient) {
     if (allowGoogleClient) {
-      // TODO final FusedLocationProviderClient locationClient = LocationServices.getFusedLocationProviderClient(context);
     }
     Settings.LastLocation lastLocation = Settings.instance().getLastKnownLocation();
     if (lastLocation != null) {
