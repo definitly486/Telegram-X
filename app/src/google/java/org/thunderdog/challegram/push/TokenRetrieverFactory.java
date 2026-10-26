@@ -9,8 +9,6 @@
  *
  * You should have received a copy of the GNU General Public License
  * along with this program. If not, see <https://www.gnu.org/licenses/>.
- *
- * File created on 22/10/2022
  */
 package org.thunderdog.challegram.push;
 
@@ -20,6 +18,6 @@ import org.thunderdog.challegram.util.TokenRetriever;
 
 public final class TokenRetrieverFactory {
   public static TokenRetriever newRetriever (Context context) {
-    return new FirebaseTokenRetriever();
+    return new NoOpTokenRetriever();
   }
 }
