@@ -82,12 +82,6 @@
   <uses-permission android:name="android.permission.READ_MEDIA_VIDEO" />
   <uses-permission android:name="android.permission.READ_MEDIA_AUDIO" />
 
-  <uses-permission android:name="com.google.android.providers.gsf.permission.READ_GSERVICES" />
-  <uses-permission android:name="com.google.android.c2dm.permission.RECEIVE" />
-
-  <uses-permission android:name="${applicationId}.permission.MAPS_RECEIVE" />
-  <uses-permission android:name="${applicationId}.permission.C2D_MESSAGE" />
-
   <uses-permission android:name="com.sec.android.provider.badge.permission.READ" />
   <uses-permission android:name="com.sec.android.provider.badge.permission.WRITE" />
   <uses-permission android:name="com.htc.launcher.permission.READ_SETTINGS" />
@@ -108,7 +102,6 @@
   <uses-permission android:name="android.permission.AUTHENTICATE_ACCOUNTS" />
 
   <queries>
-    <package android:name="com.google.android.apps.maps" />
     <package android:name="com.google.android.launcher.layouts.genymotion" />
     <package android:name="com.bluestacks" />
     <package android:name="com.bignox.app" />
@@ -138,24 +131,12 @@
     tools:targetApi="r">
 
     <meta-data
-      android:name="firebase_analytics_collection_deactivated"
-      android:value="true" />
-    <meta-data
-      android:name="firebase_analytics_collection_enabled"
-      android:value="false" />
-    <meta-data
       android:name="google_analytics_adid_collection_enabled"
       android:value="false" />
     <meta-data
         android:name="com.google.mlkit.vision.DEPENDENCIES"
         android:value="barcode,model2,model3" />
 
-    <service android:name=".service.FirebaseListenerService"
-      android:exported="false">
-      <intent-filter>
-        <action android:name="com.google.firebase.MESSAGING_EVENT" />
-      </intent-filter>
-    </service>
     <service
       android:name=".service.NetworkListenerService"
       android:enabled="true"
@@ -219,13 +200,6 @@
         android:resource="@xml/syncadapter" />
     </service>
 
-    <meta-data
-      android:name="com.google.android.maps.v2.API_KEY"
-      android:value="AIzaSyDzAoJrVB72LgqSZ1LP6Hpp8egGEJVH7PA" />
-
-    <uses-library
-      android:name="com.google.android.maps"
-      android:required="false" />
     <uses-library
       android:name="org.apache.http.legacy"
       android:required="false" />
