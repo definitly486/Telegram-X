@@ -402,12 +402,6 @@ dependencies {
   implementation("com.google.android.gms:play-services-location:18.0.0")
   implementation("com.google.android.gms:play-services-mlkit-barcode-scanning:16.2.1")
   implementation("com.google.android.gms:play-services-safetynet:18.0.1")
-  // Firebase: https://firebase.google.com/support/release-notes/android
-  implementation("com.google.firebase:firebase-messaging:22.0.0") {
-    exclude(group = "com.google.firebase", module = "firebase-core")
-    exclude(group = "com.google.firebase", module = "firebase-analytics")
-    exclude(group = "com.google.firebase", module = "firebase-measurement-connector")
-  }
   // implementation("com.google.firebase:firebase-appcheck-safetynet:16.1.2")
   // Play Integrity: https://developer.android.com/google/play/integrity/reference/com/google/android/play/core/release-notes
   implementation("com.google.android.play:integrity:1.3.0") // 1.4.0+ requires minSdkVersion 21
@@ -446,8 +440,4 @@ dependencies {
   // TODO: upgrade to "com.googlecode.mp4parser:isoparser:1.1.22" or latest
   // mp4parser: https://github.com/sannies/mp4parser/releases
   implementation("com.googlecode.mp4parser:isoparser:1.0.6")
-}
-
-if (!isExperimentalBuild) {
-  apply(plugin = "com.google.gms.google-services")
 }
