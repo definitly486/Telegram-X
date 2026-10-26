@@ -19,6 +19,6 @@ import org.thunderdog.challegram.unsorted.LocationRetriever;
 
 public class LocationRetrieverFactory {
   public static LocationRetriever newRetriever (BaseActivity context) {
-    return new GoogleLocationRetriever(context);
+    return new AndroidLocationRetriever(context);
   }
 }
