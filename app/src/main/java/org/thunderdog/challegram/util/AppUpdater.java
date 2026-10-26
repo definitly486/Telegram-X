@@ -13,7 +13,6 @@
 package org.thunderdog.challegram.util;
 
 import android.app.Activity;
-import android.content.Intent;
 import android.content.IntentSender;
 
 import androidx.annotation.IntDef;
