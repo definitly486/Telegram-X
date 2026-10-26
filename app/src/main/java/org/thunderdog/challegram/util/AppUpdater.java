@@ -17,7 +17,6 @@ import android.content.Intent;
 import android.content.IntentSender;
 
 import androidx.annotation.IntDef;
-import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.android.play.core.appupdate.AppUpdateInfo;
@@ -43,7 +42,6 @@ import org.thunderdog.challegram.telegram.ConnectionListener;
 import org.thunderdog.challegram.telegram.FileUpdateListener;
 import org.thunderdog.challegram.telegram.Tdlib;
 import org.thunderdog.challegram.telegram.TdlibContext;
-import org.thunderdog.challegram.tool.Intents;
 import org.thunderdog.challegram.tool.Strings;
 import org.thunderdog.challegram.tool.UI;
 import org.thunderdog.challegram.unsorted.Settings;
@@ -86,13 +84,11 @@ public class AppUpdater implements InstallStateUpdatedListener, FileUpdateListen
   @IntDef({
     FlowType.NONE,
     FlowType.TELEGRAM_CHANNEL,
-    FlowType.GOOGLE_PLAY
   })
   public @interface FlowType {
     int
       NONE = 0,
-      TELEGRAM_CHANNEL = 1,
-      GOOGLE_PLAY = 2;
+      TELEGRAM_CHANNEL = 1;
   }
 
   private final BaseActivity context;
