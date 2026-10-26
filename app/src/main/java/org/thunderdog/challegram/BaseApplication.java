@@ -18,12 +18,15 @@ import androidx.annotation.NonNull;
 import androidx.multidex.MultiDexApplication;
 import androidx.work.Configuration;
 
+import org.thunderdog.challegram.backup.LoginBackup;
 import org.thunderdog.challegram.tool.UI;
 
 public final class BaseApplication extends MultiDexApplication implements Configuration.Provider {
   @Override
   public void onCreate () {
     super.onCreate();
+    // Must run before anything opens TDLib files: swaps in a staged login backup, if any
+    LoginBackup.applyPendingImport(getFilesDir());
     UI.initApp(getApplicationContext());
   }
 

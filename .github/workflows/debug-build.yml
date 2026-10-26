@@ -1,0 +1,144 @@
+name: Debug build
+
+# Builds a debug APK of Telegram X and uploads it as an artifact.
+#
+# Required repository secrets (Settings -> Secrets and variables -> Actions):
+#   TELEGRAM_API_ID    - https://core.telegram.org/api/obtaining_api_id
+#   TELEGRAM_API_HASH
+#
+# The session backup feature requires the SAME api_id/api_hash in the build that
+# exports the backup and the build that imports it.
+
+on:
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: "ABI flavor"
+        type: choice
+        default: arm64
+        options: [arm64, arm32, x64, x86, universal]
+      app_id:
+        description: "Application id (must match app/google-services.json)"
+        type: string
+        default: org.thunderdog.challegram
+  push:
+    branches: [feature/login-backup]
+
+concurrency:
+  group: debug-build-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  TERM: xterm            # scripts/set-env.sh calls tput, which fails without TERM
+  ANDROID_SDK_ROOT: /home/runner/android-sdk
+  FLAVOR: ${{ inputs.flavor || 'arm64' }}
+  APP_ID: ${{ inputs.app_id || 'org.thunderdog.challegram' }}
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 120
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          lfs: true
+          fetch-depth: 1
+
+      - name: Check secrets
+        env:
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+        run: |
+          if [[ ! "$TELEGRAM_API_ID" =~ ^[0-9]+$ || ! "$TELEGRAM_API_HASH" =~ ^[0-9a-z]+$ ]]; then
+            echo "::error::Set TELEGRAM_API_ID and TELEGRAM_API_HASH repository secrets"
+            exit 1
+          fi
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install tools
+        run: sudo apt-get update && sudo apt-get install -y --no-install-recommends git-lfs wget unzip make yasm nasm
+
+      - name: Cache Android SDK + NDK
+        id: sdk-cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.ANDROID_SDK_ROOT }}
+          key: android-sdk-${{ hashFiles('version.properties', 'scripts/setup-sdk.sh') }}
+
+      - name: Install Android SDK + NDK
+        if: steps.sdk-cache.outputs.cache-hit != 'true'
+        run: |
+          mkdir -p "$ANDROID_SDK_ROOT"
+          scripts/setup-sdk.sh
+
+      - name: Cache native libraries (libvpx, FFmpeg)
+        id: native-cache
+        uses: actions/cache@v4
+        with:
+          path: |
+            app/jni/third_party/libvpx/build
+            app/jni/third_party/ffmpeg/build
+          key: native-${{ hashFiles('version.properties', 'scripts/private/build-*-impl.sh') }}
+
+      - name: Patch third-party sources
+        run: |
+          source scripts/set-env.sh
+          patch-opus-impl.sh
+          patch-androidx-media-impl.sh
+
+      - name: Build libvpx + FFmpeg
+        if: steps.native-cache.outputs.cache-hit != 'true'
+        run: |
+          source scripts/set-env.sh
+          build-vpx-impl.sh
+          build-ffmpeg-impl.sh
+
+      - name: Create local.properties
+        env:
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+        run: |
+          cat > local.properties <<PROPS
+          sdk.dir=$ANDROID_SDK_ROOT
+          app.id=$APP_ID
+          app.name=Telegram X (debug)
+          telegram.api_id=$TELEGRAM_API_ID
+          telegram.api_hash=$TELEGRAM_API_HASH
+          PROPS
+          # no keystore.file -> experimental build signed with the debug key
+
+      - name: Build debug APK
+        run: |
+          task="assemble$(tr '[:lower:]' '[:upper:]' <<< "${FLAVOR:0:1}")${FLAVOR:1}Debug"
+          echo "Running :app:$task"
+          ./gradlew ":app:$task" --stacktrace --console=plain
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: telegram-x-debug-${{ env.FLAVOR }}
+          path: app/build/outputs/apk/**/*.apk
+          if-no-files-found: error
+
+      - name: Upload reports (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports
+          path: |
+            app/build/reports/**
+            app/.cxx/**/*.log
+            **/hs_err_pid*.log
+          if-no-files-found: ignore

@@ -46,6 +46,7 @@ import org.thunderdog.challegram.U;
 import org.thunderdog.challegram.component.base.SettingView;
 import org.thunderdog.challegram.config.Config;
 import org.thunderdog.challegram.core.Background;
+import org.thunderdog.challegram.backup.LoginBackupUi;
 import org.thunderdog.challegram.core.Lang;
 import org.thunderdog.challegram.data.TD;
 import org.thunderdog.challegram.navigation.BackHeaderButton;
@@ -126,6 +127,7 @@ public class PhoneController extends EditBaseController<Void> implements Setting
   @Override
   public void fillMenuItems (int id, HeaderView header, LinearLayout menu) {
     if (id == R.id.menu_login) {
+      header.addButton(menu, R.id.btn_importLoginBackup, R.drawable.baseline_file_download_24, ColorId.headerIcon, this, Screen.dp(48f));
       header.addButton(menu, R.id.btn_proxy, R.drawable.baseline_security_24, ColorId.headerIcon, this, Screen.dp(48f));
       header.addButton(menu, R.id.btn_languageSettings, R.drawable.baseline_language_24, ColorId.headerIcon, this, Screen.dp(48f));
     }
@@ -133,7 +135,9 @@ public class PhoneController extends EditBaseController<Void> implements Setting
 
   @Override
   public void onMenuItemPressed (int id, View view) {
-    if (id == R.id.btn_proxy) {
+    if (id == R.id.btn_importLoginBackup) {
+      LoginBackupUi.startImport(this);
+    } else if (id == R.id.btn_proxy) {
       tdlib.ui().openProxySettings(this, true);
     } else if (id == R.id.btn_languageSettings) {
       navigateTo(new SettingsLanguageController(context, tdlib));
