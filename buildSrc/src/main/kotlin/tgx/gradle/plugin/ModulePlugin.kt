@@ -29,14 +29,14 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 import tgx.gradle.*
 import java.io.File
 
-class Keystore (configPath: String) {
+class Keystore (configPath: String, baseDir: File) {
   val file: File
   val password: String
   val keyAlias: String
   val keyPassword: String
 
   init {
-    val config = loadProperties(configPath)
+    val config = loadProperties(configPath, baseDir)
     this.file = File(config.getOrThrow("keystore.file"))
     this.password = config.getOrThrow("keystore.password")
     this.keyAlias = config.getOrThrow("key.alias")
@@ -57,12 +57,12 @@ open class ModulePlugin : Plugin<Project> {
       add("coreLibraryDesugaring", "com.android.tools:desugar_jdk_libs:${LibraryVersions.DESUGAR}")
     }
 
-    val properties = loadProperties()
-    val sampleProperties = loadProperties("local.properties.sample")
+    val properties = loadProperties(baseDir = project.rootProject.projectDir)
+    val sampleProperties = loadProperties("local.properties.sample", project.rootProject.projectDir)
     val keystoreFilePath = properties.getProperty("keystore.file", "")
     val disableSigning = properties.getProperty("app.disable_signing", "false") == "true"
     val keystore = if (keystoreFilePath.isNotEmpty() && !disableSigning) {
-      Keystore(keystoreFilePath)
+      Keystore(keystoreFilePath, project.rootProject.projectDir)
     } else {
       null
     }
@@ -94,7 +94,7 @@ open class ModulePlugin : Plugin<Project> {
     project.extra.set("experimental", isExperimentalBuild)
     project.extra.set("app_name", appName)
 
-    val versions = loadProperties("version.properties")
+    val versions = loadProperties("version.properties", project.rootProject.projectDir)
 
     val androidExt = project.extensions.getByName("android")
     if (androidExt is BaseExtension) {
