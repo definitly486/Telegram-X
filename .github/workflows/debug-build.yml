@@ -18,11 +18,11 @@ on:
         default: arm64
         options: [arm64, arm32, x64, x86, universal]
       app_id:
-        description: "Application id (must match app/google-services.json)"
+        description: "Application id"
         type: string
         default: org.thunderdog.challegram
   push:
-    branches: [feature/login-backup]
+    branches: [feature/login-backup, feature/no-google-play-services]
 
 concurrency:
   group: debug-build-${{ github.ref }}
