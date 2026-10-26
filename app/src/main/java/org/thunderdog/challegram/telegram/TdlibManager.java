@@ -1725,8 +1725,15 @@ public class TdlibManager implements Iterable<TdlibAccount>, UI.StateListener {
 
       @Override
       public void onError (@NonNull String errorKey, @Nullable Throwable e) {
-        Log.e(Log.TAG_FCM, "Failed to retrieve push token", e);
-        setTokenState(TokenState.ERROR, errorKey, e);
+        if ("none".equals(TdlibNotificationUtils.getTokenRetriever().getName())) {
+          // Builds without a push provider (NoOpTokenRetriever) have no token by design.
+          // This is not an error: do not show warnings or report it as a push service failure.
+          Log.i(Log.TAG_FCM, "Push provider is not configured, skipping token registration");
+          setTokenState(TokenState.NONE);
+        } else {
+          Log.e(Log.TAG_FCM, "Failed to retrieve push token", e);
+          setTokenState(TokenState.ERROR, errorKey, e);
+        }
         if (after != null) {
           after.runWithBool(false);
         }

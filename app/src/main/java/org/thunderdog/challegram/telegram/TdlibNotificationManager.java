@@ -525,7 +525,7 @@ public class TdlibNotificationManager implements UI.StateListener, Passcode.Lock
   }
 
   public boolean needSyncAlert () {
-    return isSyncDisabledGlobally() && !hasFirebase();
+    return !usesNoOpTokenRetriever() && isSyncDisabledGlobally() && !hasFirebase();
   }
 
   private boolean usesNoOpTokenRetriever () {

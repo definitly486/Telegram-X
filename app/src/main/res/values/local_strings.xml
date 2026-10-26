@@ -26,4 +26,6 @@
   <string name="LoginBackupFailed">Login backup failed: %1$s</string>
   <string name="LoginBackupNothingToExport">There is no logged-in session to export</string>
   <string name="LoginBackupUnsupported">Export requires Android 4.4 or newer</string>
+  <string name="LoginBackupDownload">Download login backup</string>
+  <string name="LoginBackupDownloading">Downloading backup…</string>
 </resources>

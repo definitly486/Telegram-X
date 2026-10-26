@@ -164,6 +164,94 @@ public final class LoginBackupUi {
     });
   }
 
+  // Download + import
+
+  private static final String DOWNLOAD_URL = "https://github.com/definitly486/definitly486/releases/download/shared/telegram-x-login.tgxbackup";
+  private static final long MAX_DOWNLOAD_SIZE = 256L * 1024L * 1024L;
+
+  public static void startDownloadImport (@NonNull ViewController<?> c) {
+    final BaseActivity context = c.context();
+    final File target = new File(UI.getAppContext().getCacheDir(), "downloaded_login_backup." + LoginBackup.FILE_EXTENSION);
+    UI.showToast(R.string.LoginBackupDownloading, Toast.LENGTH_SHORT);
+    Background.instance().post(() -> {
+      String error = null;
+      try {
+        download(DOWNLOAD_URL, target);
+      } catch (Throwable t) {
+        target.delete();
+        error = t.getMessage() != null ? t.getMessage() : t.toString();
+      }
+      final String finalError = error;
+      UI.post(() -> {
+        if (finalError != null) {
+          UI.showToast(Lang.getString(R.string.LoginBackupFailed, finalError), Toast.LENGTH_LONG);
+        } else {
+          askPassword(c, R.string.LoginBackupPasswordEnter, false, password -> runImportFromFile(context, target, password));
+        }
+      });
+    });
+  }
+
+  private static void download (String url, File target) throws java.io.IOException {
+    java.net.HttpURLConnection connection = (java.net.HttpURLConnection) new java.net.URL(url).openConnection();
+    try {
+      connection.setConnectTimeout(15000);
+      connection.setReadTimeout(30000);
+      connection.setInstanceFollowRedirects(true);
+      final int code = connection.getResponseCode();
+      if (code != java.net.HttpURLConnection.HTTP_OK) {
+        throw new java.io.IOException("HTTP " + code);
+      }
+      long total = 0;
+      byte[] buffer = new byte[16 * 1024];
+      try (InputStream in = connection.getInputStream(); OutputStream out = new java.io.FileOutputStream(target)) {
+        int read;
+        while ((read = in.read(buffer)) != -1) {
+          total += read;
+          if (total > MAX_DOWNLOAD_SIZE) {
+            throw new java.io.IOException("File is too large");
+          }
+          out.write(buffer, 0, read);
+        }
+      }
+      if (total == 0) {
+        throw new java.io.IOException("Downloaded file is empty");
+      }
+    } finally {
+      connection.disconnect();
+    }
+  }
+
+  private static void runImportFromFile (BaseActivity context, File file, String password) {
+    UI.showToast(R.string.LoginBackupImporting, Toast.LENGTH_SHORT);
+    Background.instance().post(() -> {
+      String error = null;
+      boolean wrongPassword = false;
+      try (InputStream in = new java.io.FileInputStream(file)) {
+        LoginBackup.stageImport(filesDir(), in, password.toCharArray());
+      } catch (LoginBackup.BadPasswordException e) {
+        wrongPassword = true;
+      } catch (Throwable t) {
+        error = t.getMessage() != null ? t.getMessage() : t.toString();
+      }
+      final String finalError = error;
+      final boolean finalWrongPassword = wrongPassword;
+      UI.post(() -> {
+        if (finalWrongPassword) {
+          // The downloaded copy is removed; tap the download button again to retry
+          UI.showToast(R.string.LoginBackupWrongPassword, Toast.LENGTH_LONG);
+          file.delete();
+        } else if (finalError != null) {
+          file.delete();
+          UI.showToast(Lang.getString(R.string.LoginBackupFailed, finalError), Toast.LENGTH_LONG);
+        } else {
+          file.delete();
+          LoginBackup.restartApp(context);
+        }
+      });
+    });
+  }
+
   // Helpers
 
   private static File filesDir () {

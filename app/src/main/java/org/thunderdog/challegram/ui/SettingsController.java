@@ -66,6 +66,7 @@ import org.thunderdog.challegram.telegram.Tdlib;
 import org.thunderdog.challegram.telegram.TdlibCache;
 import org.thunderdog.challegram.telegram.TdlibManager;
 import org.thunderdog.challegram.telegram.TdlibNotificationManager;
+import org.thunderdog.challegram.telegram.TdlibNotificationUtils;
 import org.thunderdog.challegram.telegram.TdlibOptionListener;
 import org.thunderdog.challegram.telegram.TdlibUi;
 import org.thunderdog.challegram.theme.ColorId;
@@ -1393,7 +1394,8 @@ public class SettingsController extends ViewController<Void> implements
       colors.append(OptionColor.NORMAL);
     }
 
-    boolean notificationError = tdlib.context().getTokenState() == TdlibManager.TokenState.ERROR;
+    boolean notificationError = tdlib.context().getTokenState() == TdlibManager.TokenState.ERROR &&
+      !"none".equals(TdlibNotificationUtils.getTokenRetriever().getName());
     if (allowDebug || notificationError) {
       ids.append(R.id.btn_pushService);
       strings.append(R.string.PushServices);
