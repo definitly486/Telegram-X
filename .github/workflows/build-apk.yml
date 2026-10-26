@@ -1,0 +1,55 @@
+
+name: Build Telegram X APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - feature/no-google-play-services
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04
+    steps:
+      - name: Checkout source
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK packages
+        run: |
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
+          git submodule update --init --recursive
+
+      - name: Create local.properties
+        run: |
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
+          echo "telegram.api_id=${{ secrets.TELEGRAM_API_ID }}" >> local.properties
+          echo "telegram.api_hash=${{ secrets.TELEGRAM_API_HASH }}" >> local.properties
+
+      - name: Build ARM64 debug APK
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleLatestArm64Debug --no-daemon
+
+      - name: Upload APK
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Telegram-X-debug-APK
+          path: |
+            app/build/outputs/apk/**/*.apk
+          if-no-files-found: warn
+          retention-days: 7
