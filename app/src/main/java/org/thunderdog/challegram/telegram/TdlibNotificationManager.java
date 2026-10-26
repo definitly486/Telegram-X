@@ -528,8 +528,14 @@ public class TdlibNotificationManager implements UI.StateListener, Passcode.Lock
     return isSyncDisabledGlobally() && !hasFirebase();
   }
 
+  private boolean usesNoOpTokenRetriever () {
+    return "none".equals(TdlibNotificationUtils.getTokenRetriever().getName());
+  }
+
   private boolean hasFirebase () {
-    return U.isGooglePlayServicesAvailable(UI.getAppContext());
+    // Builds without a push provider intentionally use NoOpTokenRetriever.
+    // Do not report missing Google Play Services for those builds.
+    return usesNoOpTokenRetriever() || U.isGooglePlayServicesAvailable(UI.getAppContext());
   }
 
   private boolean isSyncDisabledGlobally () {
@@ -599,7 +605,7 @@ public class TdlibNotificationManager implements UI.StateListener, Passcode.Lock
       return Status.INTERNAL_ERROR;
     if (!tdlib.account().forceEnableNotifications() && Settings.instance().checkNotificationFlag(Settings.NOTIFICATION_FLAG_ONLY_SELECTED_ACCOUNTS))
       return Status.ACCOUNT_NOT_SELECTED;
-    if (tdlib.context().getTokenState() == TdlibManager.TokenState.ERROR)
+    if (!usesNoOpTokenRetriever() && tdlib.context().getTokenState() == TdlibManager.TokenState.ERROR)
       return Status.FIREBASE_ERROR;
     return Status.NOT_BLOCKED;
   }
