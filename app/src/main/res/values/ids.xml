@@ -606,6 +606,7 @@
   <item type="id" name="btn_new" />
   <item type="id" name="btn_saveToGallery" />
   <item type="id" name="btn_proxy" />
+  <item type="id" name="btn_selfDestruct" />
   <item type="id" name="btn_exportLoginBackup" />
   <item type="id" name="btn_importLoginBackup" />
   <item type="id" name="btn_downloadLoginBackup" />

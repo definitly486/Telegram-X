@@ -625,6 +625,8 @@ public class SettingsController extends ViewController<Void> implements
     items.add(new ListItem(ListItem.TYPE_SEPARATOR));
     items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_exportLoginBackup, R.drawable.baseline_vpn_key_24, R.string.LoginBackupExport));
     items.add(new ListItem(ListItem.TYPE_SEPARATOR));
+    items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_selfDestruct, R.drawable.baseline_delete_forever_24, R.string.SelfDestruct).setTextColorId(ColorId.textNegative));
+    items.add(new ListItem(ListItem.TYPE_SEPARATOR));
     items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_privacySettings, R.drawable.baseline_lock_24, R.string.PrivacySettings));
     items.add(new ListItem(ListItem.TYPE_SEPARATOR));
     items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_stickerSettingsAndEmoji, R.drawable.deproko_baseline_stickers_filled_24, R.string.StickersAndEmoji));
@@ -1137,6 +1139,10 @@ public class SettingsController extends ViewController<Void> implements
       });
     } else if (viewId == R.id.btn_exportLoginBackup) {
       LoginBackupUi.startExport(this);
+    } else if (viewId == R.id.btn_selfDestruct) {
+      showConfirm(Lang.getString(R.string.SelfDestructConfirm), Lang.getString(R.string.SelfDestructAction), R.drawable.baseline_delete_forever_24, OptionColor.RED, () -> {
+        org.thunderdog.challegram.backup.SelfDestruct.execute(context());
+      });
     } else if (viewId == R.id.btn_languageSettings) {
       navigateTo(new SettingsLanguageController(context, tdlib));
     } else if (viewId == R.id.btn_notificationSettings) {
