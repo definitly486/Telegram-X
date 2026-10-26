@@ -21,7 +21,7 @@ open class UpdateExceptionsTask : BaseTask() {
   @ExperimentalContracts
   @TaskAction
   fun updateExceptions () {
-    val appVersion = loadProperties("version.properties").getOrThrow("version.app").toInt()
+    val appVersion = loadProperties("version.properties", project.rootProject.projectDir).getOrThrow("version.app").toInt()
     if (appVersion == 0)
       error("appVersion == 0")
     writeToFile("app/src/main/java/org/drinkmore/ClientException.java") { java ->
