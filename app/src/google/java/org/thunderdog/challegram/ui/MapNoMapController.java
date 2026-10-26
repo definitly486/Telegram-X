@@ -8,10 +8,6 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
-import org.thunderdog.challegram.R;
-import org.thunderdog.challegram.tool.Screen;
-import org.thunderdog.challegram.theme.Theme;
-import org.thunderdog.challegram.theme.ColorId;
 import org.thunderdog.challegram.telegram.Tdlib;
 import android.location.Location;
 
@@ -28,9 +24,9 @@ final class MapNoMapController extends MapController<View, Object> {
   protected View createMapView (Context context, int marginBottom) {
     TextView view = new TextView(context);
     view.setGravity(Gravity.CENTER);
-    view.setText(R.string.MapUnavailable);
-    view.setTextColor(Theme.getColor(ColorId.text));
-    view.setPadding(Screen.dp(24f), Screen.dp(24f), Screen.dp(24f), Screen.dp(24f));
+    view.setText("Map is unavailable in this build");
+    view.setTextColor(0xff777777);
+    view.setPadding(24, 24, 24, 24);
     return view;
   }
 
