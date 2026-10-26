@@ -3,7 +3,7 @@
   xmlns:tools="http://schemas.android.com/tools"
   android:installLocation="auto">
 
-  <uses-sdk tools:overrideLibrary="androidx.media3.exoplayer, androidx.media3.common, androidx.media3.transformer, androidx.media3.extractor, androidx.media3.muxer, androidx.media3.decoder, androidx.media3.container, androidx.media3.datasource, androidx.media3.database, androidx.media3.effect, androidx.camera.camera2, androidx.camera.core, androidx.camera.video, androidx.camera.view, androidx.camera.lifecycle, androidx.camera.extensions, com.google.android.play.core.integrity.client, com.otaliastudios.transcoder, com.otaliastudios.opengl, com.google.android.recaptcha, com.google.android.gms.recaptchabase" />
+  <uses-sdk tools:overrideLibrary="androidx.media3.exoplayer, androidx.media3.common, androidx.media3.transformer, androidx.media3.extractor, androidx.media3.muxer, androidx.media3.decoder, androidx.media3.container, androidx.media3.datasource, androidx.media3.database, androidx.media3.effect, androidx.camera.camera2, androidx.camera.core, androidx.camera.video, androidx.camera.view, androidx.camera.lifecycle, androidx.camera.extensions, com.otaliastudios.transcoder, com.otaliastudios.opengl" />
 
   <uses-feature
     android:glEsVersion="0x00020000"
@@ -133,11 +133,7 @@
     <meta-data
       android:name="google_analytics_adid_collection_enabled"
       android:value="false" />
-    <meta-data
-        android:name="com.google.mlkit.vision.DEPENDENCIES"
-        android:value="barcode,model2,model3" />
-
-    <service
+<service
       android:name=".service.NetworkListenerService"
       android:enabled="true"
       android:exported="false"
