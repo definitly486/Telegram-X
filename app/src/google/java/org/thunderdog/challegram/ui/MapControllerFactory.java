@@ -20,6 +20,6 @@ import org.thunderdog.challegram.telegram.Tdlib;
 
 public final class MapControllerFactory {
   public static MapController<?,?> newMapController (Context context, Tdlib tdlib) {
-    return new MapGoogleController(context, tdlib);
+    return new MapNoMapController(context, tdlib);
   }
 }
