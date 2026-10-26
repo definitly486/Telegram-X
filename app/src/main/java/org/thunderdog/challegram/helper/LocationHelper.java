@@ -232,7 +232,7 @@ public class LocationHelper implements ActivityResultHandler {
       return;
     }
     if (resultCode == Activity.RESULT_OK) {
-      receiveCurrentLocation(lastSignal, false)
+      receiveCurrentLocation(lastSignal, false);
     } else {
       onReceiveLocationFailure(ERROR_CODE_RESOLUTION);
     }
