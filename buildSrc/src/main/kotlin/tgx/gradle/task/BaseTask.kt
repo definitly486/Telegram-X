@@ -22,7 +22,7 @@ abstract class BaseTask : DefaultTask() {
   private val properties: Properties
     get() {
       if (_properties == null) {
-        _properties = loadProperties()
+        _properties = loadProperties(baseDir = project.rootProject.projectDir)
       }
       return _properties!!
     }
@@ -31,7 +31,7 @@ abstract class BaseTask : DefaultTask() {
   private val sampleProperties: Properties
     get() {
       if (_sampleProperties == null) {
-        _sampleProperties = loadProperties("local.properties.sample")
+        _sampleProperties = loadProperties("local.properties.sample", project.rootProject.projectDir)
       }
       return _sampleProperties!!
     }
