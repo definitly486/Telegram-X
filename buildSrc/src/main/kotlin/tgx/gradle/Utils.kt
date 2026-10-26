@@ -19,8 +19,12 @@ import java.util.*
 fun fatal(message: String): Nothing =
   throw StopExecutionException(message)
 
-fun loadProperties (path: String = "local.properties"): Properties {
-  val file = File(path)
+fun loadProperties (
+  path: String = "local.properties",
+  baseDir: File = File(System.getenv("PWD") ?: System.getProperty("user.dir"))
+): Properties {
+  val requestedFile = File(path)
+  val file = if (requestedFile.isAbsolute) requestedFile else File(baseDir, path)
   if (!file.canRead())
     fatal("Cannot read ${file.absolutePath}")
   if (file.isDirectory)
