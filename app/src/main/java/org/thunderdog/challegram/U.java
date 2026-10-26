@@ -98,9 +98,6 @@ import androidx.media3.exoplayer.trackselection.DefaultTrackSelector;
 import androidx.media3.extractor.DefaultExtractorsFactory;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.google.android.gms.common.ConnectionResult;
-import com.google.android.gms.common.GoogleApiAvailability;
-
 import org.drinkless.tdlib.TdApi;
 import org.thunderdog.challegram.config.Config;
 import org.thunderdog.challegram.config.Device;
@@ -772,13 +769,6 @@ public class U {
   }
 
   public static boolean isGooglePlayServicesAvailable (Context context) {
-    try {
-      if (context != null && Config.GCM_ENABLED) {
-        GoogleApiAvailability googleApiAvailability = GoogleApiAvailability.getInstance();
-        int resultCode = googleApiAvailability.isGooglePlayServicesAvailable(context);
-        return resultCode == ConnectionResult.SUCCESS;
-      }
-    } catch (Throwable ignored) { }
     return false;
   }
 
