@@ -34,7 +34,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.StringRes;
 
-import com.google.android.gms.safetynet.SafetyNet;
 
 import org.drinkless.tdlib.TdApi;
 import org.thunderdog.challegram.Log;
@@ -717,31 +716,8 @@ public class PasswordController extends ViewController<PasswordController.Args> 
   private String lastVerificationError;
 
   private void sendFirebaseSmsViaSafetyNet (TdApi.FirebaseDeviceVerificationParametersSafetyNet safetyNetParameters, RunnableData<String> onVerificationError) {
-    String safetyNetApiKey = tdlib.safetyNetApiKey();
-    if (StringUtils.isEmpty(safetyNetApiKey)) {
-      TDLib.Tag.safetyNet("Requesting next code type, because SafetyNet API_KEY is unavailable");
-      requestNextCodeType(new TdApi.ResendCodeReasonVerificationFailed("SAFETYNET_API_KEY_EMPTY"), false);
-      return;
-    }
-    if (Config.REQUIRE_FIREBASE_SERVICES_FOR_SAFETYNET && !U.isGooglePlayServicesAvailable(context)) {
-      TDLib.Tag.safetyNet("Requesting next code type, because Firebase services are unavailable");
-      requestNextCodeType(new TdApi.ResendCodeReasonVerificationFailed("GOOGLE_PLAY_SERVICES_UNAVAILABLE"), false);
-      return;
-    }
-    //noinspection ConstantConditions
-    SafetyNet.getClient(context)
-      .attest(safetyNetParameters.nonce, safetyNetApiKey)
-      .addOnSuccessListener(attestationSuccess -> {
-        String result = attestationSuccess.getJwsResult();
-        handleVerificationResult(safetyNetParameters, false, result, onVerificationError);
-      })
-      .addOnFailureListener(attestationError -> {
-        String error = attestationError.getMessage();
-        TDLib.Tag.safetyNet("Attestation failed with error: %s", error);
-        executeOnUiThreadOptional(() ->
-          onVerificationError.runWithData(error)
-        );
-      });
+    TDLib.Tag.safetyNet("SafetyNet is unavailable in this build; requesting another authentication method");
+    requestNextCodeType(new TdApi.ResendCodeReasonVerificationFailed("SAFETYNET_UNAVAILABLE"), false);
   }
 
   private void sendFirebaseSmsViaPlayIntegrity (TdApi.FirebaseDeviceVerificationParametersPlayIntegrity playIntegrityParameters, RunnableData<String> onAttestationFailure) {
