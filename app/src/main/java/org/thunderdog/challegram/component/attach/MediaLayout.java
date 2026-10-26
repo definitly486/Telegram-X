@@ -34,7 +34,6 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.collection.LongSparseArray;
 
-import com.google.android.gms.maps.MapsInitializer;
 
 import org.drinkless.tdlib.TdApi;
 import org.thunderdog.challegram.BaseActivity;
@@ -663,25 +662,6 @@ public class MediaLayout extends FrameLayoutFix implements
     }
 
     switch (toIndex) {
-      case 3: {
-        boolean googleMapsInstalled;
-        try {
-          MapsInitializer.initialize(getContext());
-          googleMapsInstalled = DeviceUtils.isApplicationInstalled(getContext(), U.PACKAGE_GOOGLE_MAPS, false);
-        } catch (Throwable t) {
-          googleMapsInstalled = false;
-        }
-        if (!googleMapsInstalled) {
-          ViewController<?> c = UI.getCurrentStackItem(getContext());
-          if (c != null) {
-            c.openMissingGoogleMapsAlert();
-          } else {
-            UI.showToast(R.string.NoGoogleMaps, Toast.LENGTH_LONG);
-          }
-          return false;
-        }
-        break;
-      }
       case 1: {
         if (!ignorePermissionsRequest && UI.getContext(getContext()).permissions().requestReadExternalStorage(Permissions.ReadType.ALL, grantType -> {
           // ignore grantType
