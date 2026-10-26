@@ -400,10 +400,8 @@ dependencies {
   implementation("com.google.android.gms:play-services-basement:17.6.0")
   implementation("com.google.android.gms:play-services-maps:17.0.1")
   implementation("com.google.android.gms:play-services-location:18.0.0")
-  implementation("com.google.android.gms:play-services-safetynet:18.0.1")
   // implementation("com.google.firebase:firebase-appcheck-safetynet:16.1.2")
   // Play Integrity: https://developer.android.com/google/play/integrity/reference/com/google/android/play/core/release-notes
-  implementation("com.google.android.play:integrity:1.3.0") // 1.4.0+ requires minSdkVersion 21
   // ReCaptcha: https://cloud.google.com/recaptcha/docs/release-notes
   // Play In-App Updates: https://developer.android.com/reference/com/google/android/play/core/release-notes-in_app_updates
   // AndroidX/media: https://github.com/androidx/media/blob/release/RELEASENOTES.md
