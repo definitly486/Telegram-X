@@ -1,0 +1,167 @@
+name: Build & Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      flavor:
+        description: 'APK flavor (universal, arm64, arm32, x64, x86)'
+        required: false
+        default: 'universal'
+      tag:
+        description: 'Release tag (e.g. v0.1747). Empty = build only, no release'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 180
+    env:
+      TERM: xterm
+      FLAVOR: ${{ github.event.inputs.flavor || 'universal' }}
+    steps:
+      - name: Free disk space
+        run: |
+          sudo rm -rf /usr/share/dotnet /opt/ghc /usr/local/share/boost /opt/hostedtoolcache/CodeQL
+          df -h /
+
+      - name: Checkout (with submodules and LFS)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          lfs: true
+          fetch-depth: 0
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            git-lfs wget unzip make cmake ninja-build yasm nasm pkg-config
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Check required secrets
+        env:
+          TG_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          TG_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+        run: |
+          if [ -z "$TG_API_ID" ] || [ -z "$TG_API_HASH" ]; then
+            echo "::error::Add TELEGRAM_API_ID and TELEGRAM_API_HASH to repository secrets (https://core.telegram.org/api/obtaining_api_id)"
+            exit 1
+          fi
+
+      - name: Prepare keystore
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          KS_DIR="$RUNNER_TEMP/keystore"
+          mkdir -p "$KS_DIR"
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$KS_DIR/release.jks"
+            STORE_PASS="$KEYSTORE_PASSWORD"; ALIAS="$KEY_ALIAS"; KPASS="$KEY_PASSWORD"
+          else
+            echo "::warning::KEYSTORE_BASE64 is not set: generating a throwaway keystore. Updates signed with a different key cannot be installed over this build."
+            STORE_PASS="$(openssl rand -hex 16)"; ALIAS="tgx"; KPASS="$STORE_PASS"
+            keytool -genkeypair -keystore "$KS_DIR/release.jks" -storetype PKCS12 \
+              -storepass "$STORE_PASS" -keypass "$KPASS" -alias "$ALIAS" \
+              -keyalg RSA -keysize 4096 -validity 36500 -dname "CN=Telegram X CI"
+          fi
+          cat > "$KS_DIR/keystore.properties" <<EOF
+          keystore.file=$KS_DIR/release.jks
+          keystore.password=$STORE_PASS
+          key.alias=$ALIAS
+          key.password=$KPASS
+          EOF
+          # Strip the indentation added by the YAML block
+          sed -i 's/^ *//' "$KS_DIR/keystore.properties"
+          echo "KEYSTORE_FILE=$KS_DIR/keystore.properties" >> "$GITHUB_ENV"
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-${{ hashFiles('**/*.gradle*', 'gradle/wrapper/gradle-wrapper.properties', 'version.properties', 'buildSrc/**/*.kt') }}
+          restore-keys: gradle-${{ runner.os }}-
+
+      - name: Setup SDK, NDK and native dependencies
+        env:
+          ANDROID_SDK_ROOT: ${{ runner.temp }}/android-sdk
+          TELEGRAM_API_ID: ${{ secrets.TELEGRAM_API_ID }}
+          TELEGRAM_API_HASH: ${{ secrets.TELEGRAM_API_HASH }}
+          APP_ID: ${{ vars.APP_ID || 'org.thunderdog.challegram' }}
+          APP_NAME: ${{ vars.APP_NAME || 'Telegram X' }}
+          APP_DOWNLOAD_URL: ${{ github.server_url }}/${{ github.repository }}/releases
+          APP_SOURCES_URL: ${{ github.server_url }}/${{ github.repository }}
+        run: |
+          mkdir -p "$ANDROID_SDK_ROOT"
+          git lfs install
+          scripts/setup.sh
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> "$GITHUB_ENV"
+
+      - name: Build APK
+        run: |
+          FLAVOR_CAP="$(echo "${FLAVOR:0:1}" | tr '[:lower:]' '[:upper:]')${FLAVOR:1}"
+          ./gradlew --no-daemon "assemble${FLAVOR_CAP}Release"
+
+      - name: Collect artifacts
+        id: collect
+        run: |
+          mkdir -p dist
+          find app/build/outputs/apk -name '*.apk' -path "*/${FLAVOR}/release/*" -exec cp -v {} dist/ \;
+          find app/build/outputs -name 'native-debug-symbols.zip' -exec cp -v {} dist/ \; || true
+          (cd dist && sha256sum * > SHA256SUMS.txt && cat SHA256SUMS.txt)
+          test -n "$(ls dist/*.apk 2>/dev/null)" || { echo "::error::APK not found"; exit 1; }
+          VERSION="$(grep '^version.app=' version.properties | cut -d= -f2)"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: telegram-x-${{ env.FLAVOR }}-${{ steps.collect.outputs.version }}
+          path: dist/*
+          if-no-files-found: error
+
+      - name: Resolve release tag
+        id: tag
+        run: |
+          if [ "${{ github.ref_type }}" = "tag" ]; then
+            echo "name=${{ github.ref_name }}" >> "$GITHUB_OUTPUT"
+          elif [ -n "${{ github.event.inputs.tag }}" ]; then
+            echo "name=${{ github.event.inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "name=" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Publish GitHub release
+        if: steps.tag.outputs.name != ''
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.tag.outputs.name }}
+          name: Telegram X ${{ steps.tag.outputs.name }} (build ${{ steps.collect.outputs.version }})
+          target_commitish: ${{ github.sha }}
+          generate_release_notes: true
+          body: |
+            Telegram X build `${{ steps.collect.outputs.version }}` (${{ env.FLAVOR }}).
+
+            Includes passcode **export / import** (Settings → Privacy and Security).
+            Verify downloads with `SHA256SUMS.txt`.
+          files: dist/*

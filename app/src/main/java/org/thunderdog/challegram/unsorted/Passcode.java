@@ -16,6 +16,9 @@ package org.thunderdog.challegram.unsorted;
 
 import android.content.SharedPreferences;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import org.thunderdog.challegram.BaseActivity;
 import org.thunderdog.challegram.R;
 import org.thunderdog.challegram.U;
@@ -330,6 +333,60 @@ public class Passcode implements UI.StateListener {
     edit.apply();
     if (turnedOn) {
       TdlibManager.instance().onUpdateAllNotifications();
+    }
+  }
+
+  // Backup: export / import
+
+  /**
+   * @return true, if current passcode can be exported to a backup file.
+   * Gesture and fingerprint modes are bound to the device and are not supported.
+   */
+  public boolean canExport () {
+    return isBackupMode(mode) && passcodeHash != null;
+  }
+
+  private static boolean isBackupMode (int mode) {
+    return mode == MODE_PINCODE || mode == MODE_PASSWORD || mode == MODE_PATTERN;
+  }
+
+  public JSONObject exportState () throws JSONException {
+    if (!canExport())
+      throw new IllegalStateException();
+    JSONObject o = new JSONObject();
+    o.put("mode", mode);
+    o.put("hash", passcodeHash);
+    o.put("autolock", autolockMode);
+    o.put("visible", isVisible());
+    o.put("allow_screenshots", allowScreenshots());
+    o.put("display_notifications", displayNotifications());
+    return o;
+  }
+
+  public boolean importState (JSONObject o) {
+    try {
+      int mode = o.getInt("mode");
+      String hash = o.getString("hash");
+      int autolock = o.optInt("autolock", AUTOLOCK_MODE_NONE);
+      if (!isBackupMode(mode) || hash.length() == 0 || autolock < AUTOLOCK_MODE_NONE || autolock > AUTOLOCK_MODE_INSTANT)
+        return false;
+      boolean turnedOn = this.mode == MODE_NONE;
+      this.mode = mode;
+      this.passcodeHash = hash;
+      SharedPreferences.Editor edit = Settings.instance().edit();
+      edit.putInt(KEY_PASSCODE_MODE, mode);
+      edit.putString(KEY_PASSCODE_HASH, hash);
+      edit.apply();
+      setAutolockMode(autolock);
+      setVisible(o.optBoolean("visible", true));
+      setAllowScreenshots(o.optBoolean("allow_screenshots", false));
+      setDisplayNotifications(o.optBoolean("display_notifications", false));
+      if (turnedOn) {
+        TdlibManager.instance().onUpdateAllNotifications();
+      }
+      return true;
+    } catch (JSONException e) {
+      return false;
     }
   }
 

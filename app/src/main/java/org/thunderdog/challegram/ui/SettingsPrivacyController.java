@@ -14,7 +14,11 @@
  */
 package org.thunderdog.challegram.ui;
 
+import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
+import android.text.InputType;
 import android.os.Bundle;
 import android.util.SparseIntArray;
 import android.view.View;
@@ -22,16 +26,19 @@ import android.widget.Toast;
 
 import androidx.annotation.IdRes;
 import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 import androidx.collection.SparseArrayCompat;
 
 import org.drinkless.tdlib.Client;
 import org.drinkless.tdlib.TdApi;
+
 import org.thunderdog.challegram.Log;
 import org.thunderdog.challegram.R;
 import org.thunderdog.challegram.component.base.SettingView;
 import org.thunderdog.challegram.core.Lang;
 import org.thunderdog.challegram.data.TD;
 import org.thunderdog.challegram.navigation.SettingsWrapBuilder;
+import org.thunderdog.challegram.navigation.ActivityResultHandler;
 import org.thunderdog.challegram.navigation.ViewController;
 import org.thunderdog.challegram.telegram.ChatListener;
 import org.thunderdog.challegram.telegram.PrivacySettings;
@@ -45,7 +52,9 @@ import org.thunderdog.challegram.telegram.TdlibUi;
 import org.thunderdog.challegram.theme.ColorId;
 import org.thunderdog.challegram.tool.UI;
 import org.thunderdog.challegram.unsorted.Passcode;
+import org.thunderdog.challegram.unsorted.PasscodeBackup;
 import org.thunderdog.challegram.unsorted.Settings;
+import org.thunderdog.challegram.widget.MaterialEditTextGroup;
 import org.thunderdog.challegram.v.CustomRecyclerView;
 
 import java.util.ArrayList;
@@ -54,7 +63,7 @@ import java.util.List;
 import me.vkryl.core.StringUtils;
 import tgx.td.Td;
 
-public class SettingsPrivacyController extends RecyclerViewController<SettingsPrivacyController.Args> implements View.OnClickListener, ViewController.SettingsIntDelegate, TdlibCache.UserDataChangeListener, TdlibContactManager.StatusChangeListener, PrivacySettingsListener, SessionListener, ChatListener {
+public class SettingsPrivacyController extends RecyclerViewController<SettingsPrivacyController.Args> implements View.OnClickListener, ViewController.SettingsIntDelegate, TdlibCache.UserDataChangeListener, TdlibContactManager.StatusChangeListener, PrivacySettingsListener, SessionListener, ChatListener, ActivityResultHandler {
   public static class Args {
     private final boolean onlyPrivacy;
 
@@ -144,6 +153,10 @@ public class SettingsPrivacyController extends RecyclerViewController<SettingsPr
       items.add(new ListItem(ListItem.TYPE_VALUED_SETTING, R.id.btn_sessions, R.drawable.baseline_devices_other_24, R.string.SessionsTitle));
       items.add(new ListItem(ListItem.TYPE_SEPARATOR_FULL));
       items.add(new ListItem(ListItem.TYPE_VALUED_SETTING, R.id.btn_passcode, R.drawable.baseline_lock_24, R.string.PasscodeTitle));
+      items.add(new ListItem(ListItem.TYPE_SEPARATOR_FULL));
+      items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_passcodeExport, R.drawable.baseline_import_export_24, R.string.PasscodeExport));
+      items.add(new ListItem(ListItem.TYPE_SEPARATOR_FULL));
+      items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_passcodeImport, R.drawable.baseline_import_export_24, R.string.PasscodeImport));
       items.add(new ListItem(ListItem.TYPE_SEPARATOR_FULL));
       items.add(new ListItem(ListItem.TYPE_VALUED_SETTING, R.id.btn_2fa, R.drawable.mrgrigri_baseline_textbox_password_24, R.string.TwoStepVerification));
       if (passwordState != null && !StringUtils.isEmpty(passwordState.loginEmailAddressPattern)) {
@@ -480,6 +493,10 @@ public class SettingsPrivacyController extends RecyclerViewController<SettingsPr
       } else {
         navigateTo(new PasscodeSetupController(context, tdlib));
       }
+    } else if (id == R.id.btn_passcodeExport) {
+      exportPasscode();
+    } else if (id == R.id.btn_passcodeImport) {
+      importPasscode();
     } else if (id == R.id.btn_2fa) {
       if (passwordState != null) {
         if (!passwordState.hasPassword) {
@@ -812,6 +829,121 @@ public class SettingsPrivacyController extends RecyclerViewController<SettingsPr
     if (this.blockedSendersCount != senders.totalCount) {
       this.blockedSendersCount = senders.totalCount;
       adapter.updateValuedSettingById(R.id.btn_blockedSenders);
+    }
+  }
+
+  // Passcode backup (export / import)
+
+  private static final int REQUEST_PASSCODE_EXPORT = 20001;
+  private static final int REQUEST_PASSCODE_IMPORT = 20002;
+
+  private String pendingBackupPassword;
+  private byte[] pendingBackupFile;
+
+  private MaterialEditTextGroup askBackupPassword (@StringRes int hint, ViewController.InputAlertCallback callback) {
+    MaterialEditTextGroup input = openInputAlert(Lang.getString(R.string.PasscodeBackupPassword), Lang.getString(hint), R.string.Done, R.string.Cancel, null, callback, true);
+    if (input != null) {
+      input.getEditText().setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+    }
+    return input;
+  }
+
+  private void exportPasscode () {
+    if (!Passcode.instance().canExport()) {
+      UI.showToast(R.string.PasscodeBackupUnsupported, Toast.LENGTH_SHORT);
+      return;
+    }
+    askBackupPassword(R.string.PasscodeBackupPasswordHint, (inputView, result) -> {
+      if (result.length() < PasscodeBackup.MIN_BACKUP_PASSWORD_SIZE) {
+        UI.showToast(R.string.PasscodeBackupPasswordShort, Toast.LENGTH_SHORT);
+        return false;
+      }
+      pendingBackupPassword = result;
+      try {
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType(PasscodeBackup.MIME_TYPE);
+        intent.putExtra(Intent.EXTRA_TITLE, "tgx-passcode." + PasscodeBackup.FILE_EXTENSION);
+        UI.startActivityForResult(intent, REQUEST_PASSCODE_EXPORT);
+      } catch (Throwable t) {
+        pendingBackupPassword = null;
+        UI.showToast(R.string.PasscodeBackupError, Toast.LENGTH_SHORT);
+      }
+      return true;
+    });
+  }
+
+  private void importPasscode () {
+    try {
+      Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+      intent.addCategory(Intent.CATEGORY_OPENABLE);
+      intent.setType("*/*");
+      UI.startActivityForResult(intent, REQUEST_PASSCODE_IMPORT);
+    } catch (Throwable t) {
+      UI.showToast(R.string.PasscodeBackupError, Toast.LENGTH_SHORT);
+    }
+  }
+
+  @Override
+  public void onActivityResult (int requestCode, int resultCode, Intent data) {
+    if (requestCode != REQUEST_PASSCODE_EXPORT && requestCode != REQUEST_PASSCODE_IMPORT) {
+      return;
+    }
+    final String password = pendingBackupPassword;
+    pendingBackupPassword = null;
+    if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null) {
+      return;
+    }
+    final Uri uri = data.getData();
+    if (requestCode == REQUEST_PASSCODE_EXPORT) {
+      try {
+        byte[] file = PasscodeBackup.export(Passcode.instance(), password);
+        try (java.io.OutputStream out = context().getContentResolver().openOutputStream(uri)) {
+          if (out == null) throw new java.io.IOException("No output stream");
+          out.write(file);
+        }
+        UI.showToast(R.string.PasscodeBackupExported, Toast.LENGTH_SHORT);
+      } catch (Throwable t) {
+        Log.e("Cannot export passcode", t);
+        UI.showToast(R.string.PasscodeBackupError, Toast.LENGTH_SHORT);
+      }
+    } else {
+      try (java.io.InputStream in = context().getContentResolver().openInputStream(uri)) {
+        if (in == null) throw new java.io.IOException("No input stream");
+        java.io.ByteArrayOutputStream bytes = new java.io.ByteArrayOutputStream();
+        byte[] buffer = new byte[4096];
+        int read;
+        while ((read = in.read(buffer)) != -1) {
+          bytes.write(buffer, 0, read);
+          if (bytes.size() > 64 * 1024) { // Backup files are tiny
+            UI.showToast(R.string.PasscodeBackupInvalid, Toast.LENGTH_SHORT);
+            return;
+          }
+        }
+        pendingBackupFile = bytes.toByteArray();
+      } catch (Throwable t) {
+        Log.e("Cannot read passcode backup", t);
+        UI.showToast(R.string.PasscodeBackupError, Toast.LENGTH_SHORT);
+        return;
+      }
+      askBackupPassword(R.string.PasscodeBackupPasswordImportHint, (inputView, result) -> {
+        byte[] file = pendingBackupFile;
+        PasscodeBackup.Result r = file != null ? PasscodeBackup.importFrom(Passcode.instance(), file, result) : PasscodeBackup.Result.INVALID_FILE;
+        switch (r) {
+          case OK:
+            pendingBackupFile = null;
+            UI.showToast(R.string.PasscodeBackupImported, Toast.LENGTH_SHORT);
+            getRecyclerView().getAdapter().notifyDataSetChanged();
+            return true;
+          case WRONG_PASSWORD:
+            UI.showToast(R.string.PasscodeBackupWrongPassword, Toast.LENGTH_SHORT);
+            return false;
+          default:
+            pendingBackupFile = null;
+            UI.showToast(R.string.PasscodeBackupInvalid, Toast.LENGTH_SHORT);
+            return true;
+        }
+      });
     }
   }
 }
