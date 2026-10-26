@@ -396,10 +396,6 @@ dependencies {
   implementation("androidx.camera:camera-lifecycle:${LibraryVersions.ANDROIDX_CAMERA}")
   implementation("androidx.camera:camera-view:${LibraryVersions.ANDROIDX_CAMERA}")
   // Google Play Services: https://developers.google.com/android/guides/releases
-  implementation("com.google.android.gms:play-services-base:17.6.0")
-  implementation("com.google.android.gms:play-services-basement:17.6.0")
-  implementation("com.google.android.gms:play-services-maps:17.0.1")
-  implementation("com.google.android.gms:play-services-location:18.0.0")
   // implementation("com.google.firebase:firebase-appcheck-safetynet:16.1.2")
   // Play Integrity: https://developer.android.com/google/play/integrity/reference/com/google/android/play/core/release-notes
   // ReCaptcha: https://cloud.google.com/recaptcha/docs/release-notes
