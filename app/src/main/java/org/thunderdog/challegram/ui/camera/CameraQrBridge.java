@@ -22,12 +22,6 @@ import androidx.annotation.RequiresApi;
 import androidx.camera.core.ImageProxy;
 import androidx.core.content.ContextCompat;
 
-import com.google.mlkit.common.MlKitException;
-import com.google.mlkit.vision.barcode.Barcode;
-import com.google.mlkit.vision.barcode.BarcodeScanner;
-import com.google.mlkit.vision.barcode.BarcodeScannerOptions;
-import com.google.mlkit.vision.barcode.BarcodeScanning;
-import com.google.mlkit.vision.common.InputImage;
 import com.google.zxing.BinaryBitmap;
 import com.google.zxing.ChecksumException;
 import com.google.zxing.FormatException;
@@ -41,9 +35,7 @@ import com.google.zxing.qrcode.detector.FinderPattern;
 
 import org.thunderdog.challegram.Log;
 import org.thunderdog.challegram.U;
-import org.thunderdog.challegram.tool.UI;
 import org.thunderdog.challegram.ui.camera.legacy.CameraApiLegacy;
-import org.thunderdog.challegram.unsorted.Settings;
 
 import java.nio.ByteBuffer;
 import java.util.concurrent.Executor;
@@ -56,26 +48,15 @@ public class CameraQrBridge {
   private final CameraDelegate delegate;
   private final Executor mainExecutor;
   private final QRCodeReader zxingReader = new QRCodeReader();
-  private BarcodeScanner barcodeScanner;
-  private boolean mlkitFailed;
 
   public CameraQrBridge (CameraManager<?> manager) {
     this.delegate = manager.delegate;
     this.mainExecutor = ContextCompat.getMainExecutor(manager.context);
 
-    if (U.isGooglePlayServicesAvailable(UI.getAppContext()) && !Settings.instance().needForceZxingQrProcessing()) {
-      try {
-        barcodeScanner = BarcodeScanning.getClient(new BarcodeScannerOptions.Builder().setBarcodeFormats(Barcode.FORMAT_QR_CODE).build());
-      } catch (Exception e) {
-        Log.e(Log.TAG_CAMERA, e);
-      }
-    }
   }
 
   public void destroy () {
-    if (barcodeScanner != null) barcodeScanner.close();
     backgroundExecutor.shutdown();
-    mlkitFailed = false;
   }
 
   @RequiresApi(Build.VERSION_CODES.LOLLIPOP)
@@ -87,51 +68,17 @@ public class CameraQrBridge {
       return;
     }
 
-    if (isGmsImplementationSupported()) {
-      gmsImplementation(InputImage.fromMediaImage(mediaImage, proxy.getImageInfo().getRotationDegrees()), bufferAsBytes(proxy.getPlanes()[0].getBuffer()), U.isRotated(proxy.getImageInfo().getRotationDegrees()), proxy::close);
-    } else {
-      zxingImplementation(bufferAsBytes(proxy.getPlanes()[0].getBuffer()), proxy.getWidth(), proxy.getHeight(), proxy.getImageInfo().getRotationDegrees(), proxy::close);
-    }
+    zxingImplementation(bufferAsBytes(proxy.getPlanes()[0].getBuffer()), proxy.getWidth(), proxy.getHeight(), proxy.getImageInfo().getRotationDegrees(), proxy::close);
   }
 
   public void processImage (byte[] data, int previewWidth, int previewHeight, CameraApiLegacy legacyApi) {
     int rotation = delegate.getCurrentCameraOrientation();
 
-    if (isGmsImplementationSupported()) {
-      gmsImplementation(InputImage.fromByteArray(data, previewWidth, previewHeight, rotation, ImageFormat.NV21), data, U.isRotated(rotation), legacyApi::notifyCanReadNextFrame);
-    } else {
-      zxingImplementation(data, previewWidth, previewHeight, rotation, legacyApi::notifyCanReadNextFrame);
-    }
+    zxingImplementation(data, previewWidth, previewHeight, rotation, legacyApi::notifyCanReadNextFrame);
   }
 
   public boolean isGmsImplementationSupported () {
-    return barcodeScanner != null && !mlkitFailed;
-  }
-
-  private void gmsImplementation (InputImage image, byte[] safeData, boolean swapSizes, @Nullable Runnable onCompleteListener) {
-    barcodeScanner.process(image).addOnSuccessListener(mainExecutor, barcodes -> {
-      if (barcodes.isEmpty()) {
-        delegate.onQrCodeNotFound();
-      } else {
-        Barcode first = barcodes.get(0);
-
-        if (swapSizes) {
-          delegate.onQrCodeFound(first.getRawValue(), new RectF(first.getBoundingBox()), image.getWidth(), image.getHeight(), 0,  false);
-        } else {
-          delegate.onQrCodeFound(first.getRawValue(), new RectF(first.getBoundingBox()), image.getHeight(), image.getWidth(), 0, false);
-        }
-      }
-    }).addOnFailureListener(ex -> {
-      if (ex instanceof MlKitException) {
-        //Log.w("MlkitException - reverting to ZXing [code: %s, msg: %s]", ((MlKitException) ex).getErrorCode(), ex.getMessage());
-        mlkitFailed = true;
-        zxingImplementation(safeData, image.getWidth(), image.getHeight(), image.getRotationDegrees(), onCompleteListener);
-      } else {
-        Log.e(Log.TAG_CAMERA, ex);
-      }
-    }).addOnCompleteListener(result -> {
-      if (onCompleteListener != null) onCompleteListener.run();
-    });
+    return false;
   }
 
   @SuppressWarnings("SuspiciousNameCombination")
