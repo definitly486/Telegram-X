@@ -130,10 +130,7 @@
     android:preserveLegacyExternalStorage="true"
     tools:targetApi="r">
 
-    <meta-data
-      android:name="google_analytics_adid_collection_enabled"
-      android:value="false" />
-<service
+    <service
       android:name=".service.NetworkListenerService"
       android:enabled="true"
       android:exported="false"
