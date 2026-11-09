@@ -9,6 +9,7 @@ import android.content.Intent;
 import android.os.Build;
 import android.os.IBinder;
 import androidx.annotation.Nullable;
+import com.jcraft.jsch.HostKey;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
 import org.drinkless.tdlib.TdApi;
@@ -93,9 +94,19 @@ public class SshTunnelService extends Service {
           throw new IllegalStateException("SSH tunnel settings are incomplete");
         File kh = new File(getFilesDir(), "ssh_tunnel_known_hosts");
         FileOutputStream out = new FileOutputStream(kh, false);
-        try { out.write(c.knownHosts.getBytes(StandardCharsets.UTF_8)); out.write('\n'); } finally { out.close(); }
+        try { out.write(c.knownHosts.trim().getBytes(StandardCharsets.UTF_8)); out.write('\n'); } finally { out.close(); }
         JSch jsch = new JSch();
         jsch.setKnownHosts(kh.getAbsolutePath());
+        HostKey[] loaded = jsch.getHostKeyRepository().getHostKey(c.host, null);
+        android.util.Log.i("SshTunnelService", "Known-host check: host=" + c.host + ", port=" + c.sshPort
+          + ", fileExists=" + kh.isFile() + ", fileLength=" + kh.length()
+          + ", loadedEntries=" + (loaded == null ? 0 : loaded.length));
+        if (loaded != null) {
+          for (HostKey key : loaded) {
+            android.util.Log.i("SshTunnelService", "Loaded known host: host=" + key.getHost()
+              + ", type=" + key.getType());
+          }
+        }
         Session s = jsch.getSession(c.username, c.host, c.sshPort);
         s.setPassword(c.password);
         Properties options = new Properties();
