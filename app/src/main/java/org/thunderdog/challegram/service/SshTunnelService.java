@@ -23,6 +23,8 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.Security;
+import net.i2p.crypto.eddsa.EdDSASecurityProvider;
 import java.util.Properties;
 
 public class SshTunnelService extends Service {
@@ -126,6 +128,12 @@ public class SshTunnelService extends Service {
         File kh = new File(getFilesDir(), "ssh_tunnel_known_hosts");
         FileOutputStream out = new FileOutputStream(kh, false);
         try { out.write(c.knownHosts.trim().getBytes(StandardCharsets.UTF_8)); out.write('\n'); } finally { out.close(); }
+        // Register the bundled EdDSA provider before JSch probes available host-key signatures.
+        if (Security.getProvider(EdDSASecurityProvider.PROVIDER_NAME) == null) {
+          Security.addProvider(new EdDSASecurityProvider());
+        }
+        android.util.Log.i("SshTunnelService", "EdDSA provider: "
+          + (Security.getProvider(EdDSASecurityProvider.PROVIDER_NAME) != null ? "registered" : "unavailable"));
         JSch jsch = new JSch();
         jsch.setKnownHosts(kh.getAbsolutePath());
         HostKeyRepository repository = jsch.getHostKeyRepository();
