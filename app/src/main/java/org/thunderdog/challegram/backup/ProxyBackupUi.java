@@ -25,6 +25,8 @@ import org.thunderdog.challegram.core.Lang;
 import org.thunderdog.challegram.navigation.ViewController;
 import org.thunderdog.challegram.tool.UI;
 import org.thunderdog.challegram.unsorted.Settings;
+import org.thunderdog.challegram.service.SshTunnelConfig;
+import org.thunderdog.challegram.service.SshTunnelService;
 import org.thunderdog.challegram.widget.MaterialEditTextGroup;
 
 import java.io.InputStream;
@@ -56,13 +58,13 @@ public final class ProxyBackupUi {
         if (!password.equals(repeat)) {
           UI.showToast("Passwords do not match", Toast.LENGTH_LONG);
         } else {
-          pickExportTarget(controller, proxies, password);
+          pickExportTarget(controller, proxies, password, SshTunnelConfig.load(controller.context()), SshTunnelConfig.isEnabled(controller.context()));
         }
       })
     );
   }
 
-  private static void pickExportTarget(ViewController<?> controller, List<Settings.Proxy> proxies, String password) {
+  private static void pickExportTarget(ViewController<?> controller, List<Settings.Proxy> proxies, String password, SshTunnelConfig sshTunnel, boolean sshEnabled) {
     BaseActivity context = controller.context();
     Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT)
       .addCategory(Intent.CATEGORY_OPENABLE)
@@ -71,7 +73,7 @@ public final class ProxyBackupUi {
     context.putActivityResultHandler(REQUEST_EXPORT, (requestCode, resultCode, data) -> {
       context.putActivityResultHandler(REQUEST_EXPORT, null);
       Uri uri = resultCode == Activity.RESULT_OK && data != null ? data.getData() : null;
-      if (uri != null) runExport(context, uri, proxies, password);
+      if (uri != null) runExport(context, uri, proxies, password, sshTunnel, sshEnabled);
     });
     try {
       UI.startActivityForResult(intent, REQUEST_EXPORT);
@@ -81,12 +83,12 @@ public final class ProxyBackupUi {
     }
   }
 
-  private static void runExport(BaseActivity context, Uri uri, List<Settings.Proxy> proxies, String password) {
+  private static void runExport(BaseActivity context, Uri uri, List<Settings.Proxy> proxies, String password, SshTunnelConfig sshTunnel, boolean sshEnabled) {
     Background.instance().post(() -> {
       String error = null;
       try (OutputStream out = context.getContentResolver().openOutputStream(uri)) {
         if (out == null) throw new java.io.IOException("Unable to open the selected file");
-        ProxyBackup.export(proxies, out, password.toCharArray());
+        ProxyBackup.export(proxies, out, password.toCharArray(), sshTunnel, sshEnabled);
       } catch (Throwable t) {
         error = t.getMessage() != null ? t.getMessage() : t.toString();
       }
@@ -125,13 +127,13 @@ public final class ProxyBackupUi {
       boolean wrongPassword = false;
       try (InputStream in = context.getContentResolver().openInputStream(uri)) {
         if (in == null) throw new java.io.IOException("Unable to open the selected file");
-        imported = ProxyBackup.importProxies(in, password.toCharArray());
+        imported = ProxyBackup.importBackup(in, password.toCharArray());
       } catch (ProxyBackup.BadPasswordException e) {
         wrongPassword = true;
       } catch (Throwable t) {
         error = t.getMessage() != null ? t.getMessage() : t.toString();
       }
-      final List<ProxyBackup.ImportedProxy> result = imported;
+      final ProxyBackup.ImportedBackup result = imported;
       final String finalError = error;
       final boolean finalWrongPassword = wrongPassword;
       UI.post(() -> {
@@ -140,12 +142,25 @@ public final class ProxyBackupUi {
         } else if (finalError != null) {
           UI.showToast("Import failed: " + finalError, Toast.LENGTH_LONG);
         } else {
+          // Restore and persist the SSH tunnel before importing any proxy entries.
+          if (result.sshTunnel != null) {
+            ProxyBackup.ImportedSshTunnel ssh = result.sshTunnel;
+            boolean saved = SshTunnelConfig.save(context, ssh.host, ssh.sshPort, ssh.username,
+              ssh.password, ssh.remotePort, ssh.knownHosts);
+            if (!saved) {
+              UI.showToast("SSH tunnel settings could not be restored on this Android version", Toast.LENGTH_LONG);
+              return;
+            }
+            SshTunnelConfig.setEnabled(context, ssh.enabled);
+            if (ssh.enabled) SshTunnelService.startIfEnabled(context);
+          }
           int count = 0;
-          for (ProxyBackup.ImportedProxy item : result) {
+          for (ProxyBackup.ImportedProxy item : result.proxies) {
             Settings.instance().addOrUpdateProxy(item.proxy, item.description, false);
             count++;
           }
-          UI.showToast("Imported " + count + " proxy settings", Toast.LENGTH_LONG);
+          UI.showToast("Imported " + count + " proxy settings"
+            + (result.sshTunnel != null ? " and SSH tunnel settings" : ""), Toast.LENGTH_LONG);
         }
       });
     });
