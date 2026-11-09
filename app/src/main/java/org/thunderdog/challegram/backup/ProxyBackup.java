@@ -11,6 +11,7 @@ package org.thunderdog.challegram.backup;
 
 import org.drinkless.tdlib.TdApi;
 import org.thunderdog.challegram.unsorted.Settings;
+import org.thunderdog.challegram.service.SshTunnelConfig;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -51,7 +52,8 @@ public final class ProxyBackup {
 
   private ProxyBackup() { }
 
-  public static void export(List<Settings.Proxy> proxies, OutputStream output, char[] password)
+  public static void export(List<Settings.Proxy> proxies, OutputStream output, char[] password,
+                            SshTunnelConfig sshTunnel, boolean sshEnabled)
       throws IOException, GeneralSecurityException, JSONException {
     JSONArray array = new JSONArray();
     for (Settings.Proxy item : proxies) {
@@ -93,6 +95,17 @@ public final class ProxyBackup {
     root.put("format", "telegram-x-proxies");
     root.put("version", VERSION);
     root.put("proxies", array);
+    if (sshTunnel != null && !sshTunnel.host.trim().isEmpty()) {
+      JSONObject ssh = new JSONObject();
+      ssh.put("host", sshTunnel.host);
+      ssh.put("sshPort", sshTunnel.sshPort);
+      ssh.put("username", sshTunnel.username);
+      ssh.put("password", sshTunnel.password);
+      ssh.put("remotePort", sshTunnel.remotePort);
+      ssh.put("knownHosts", sshTunnel.knownHosts);
+      ssh.put("enabled", sshEnabled);
+      root.put("sshTunnel", ssh);
+    }
     byte[] plain = root.toString().getBytes(StandardCharsets.UTF_8);
 
     SecureRandom random = new SecureRandom();
@@ -112,7 +125,7 @@ public final class ProxyBackup {
     java.util.Arrays.fill(plain, (byte) 0);
   }
 
-  public static List<ImportedProxy> importProxies(InputStream input, char[] password)
+  public static ImportedBackup importBackup(InputStream input, char[] password)
       throws IOException, GeneralSecurityException, JSONException {
     byte[] file = readLimited(input);
     int headerSize = MAGIC.length + 1 + SALT_SIZE + NONCE_SIZE;
@@ -143,6 +156,23 @@ public final class ProxyBackup {
       throw new IOException("Unsupported proxy backup format");
     JSONArray array = root.getJSONArray("proxies");
     if (array.length() == 0 || array.length() > MAX_PROXIES) throw new IOException("Invalid proxy count");
+    JSONObject sshJson = root.optJSONObject("sshTunnel");
+    ImportedSshTunnel sshTunnel = null;
+    if (sshJson != null) {
+      String host = sshJson.optString("host", "");
+      int sshPort = sshJson.optInt("sshPort", 22);
+      String username = sshJson.optString("username", "");
+      String sshPassword = sshJson.optString("password", "");
+      int remotePort = sshJson.optInt("remotePort", 48555);
+      String knownHosts = sshJson.optString("knownHosts", "");
+      if (host.trim().isEmpty() || username.trim().isEmpty() || sshPassword.isEmpty()
+          || knownHosts.trim().isEmpty() || sshPort < 1 || sshPort > 65535
+          || remotePort < 1 || remotePort > 65535) {
+        throw new IOException("Invalid SSH tunnel settings in backup");
+      }
+      sshTunnel = new ImportedSshTunnel(host, sshPort, username, sshPassword,
+        remotePort, knownHosts, sshJson.optBoolean("enabled", true));
+    }
     List<ImportedProxy> result = new ArrayList<>(array.length());
     for (int i = 0; i < array.length(); i++) {
       JSONObject json = array.getJSONObject(i);
@@ -168,7 +198,12 @@ public final class ProxyBackup {
       String description = descriptionValue == null || descriptionValue == JSONObject.NULL ? null : String.valueOf(descriptionValue);
       result.add(new ImportedProxy(new TdApi.InternalLinkTypeProxy(server, port, type), description));
     }
-    return result;
+    return new ImportedBackup(result, sshTunnel);
+  }
+
+  public static List<ImportedProxy> importProxies(InputStream input, char[] password)
+      throws IOException, GeneralSecurityException, JSONException {
+    return importBackup(input, password).proxies;
   }
 
   private static byte[] readLimited(InputStream input) throws IOException {
@@ -198,6 +233,31 @@ public final class ProxyBackup {
       return SecretKeyFactory.getInstance("PBKDF2WithHmacSHA1").generateSecret(spec).getEncoded();
     } finally {
       spec.clearPassword();
+    }
+  }
+
+  public static final class ImportedBackup {
+    public final List<ImportedProxy> proxies;
+    public final ImportedSshTunnel sshTunnel;
+    ImportedBackup(List<ImportedProxy> proxies, ImportedSshTunnel sshTunnel) {
+      this.proxies = proxies;
+      this.sshTunnel = sshTunnel;
+    }
+  }
+
+  public static final class ImportedSshTunnel {
+    public final String host, username, password, knownHosts;
+    public final int sshPort, remotePort;
+    public final boolean enabled;
+    ImportedSshTunnel(String host, int sshPort, String username, String password,
+                      int remotePort, String knownHosts, boolean enabled) {
+      this.host = host;
+      this.sshPort = sshPort;
+      this.username = username;
+      this.password = password;
+      this.remotePort = remotePort;
+      this.knownHosts = knownHosts;
+      this.enabled = enabled;
     }
   }
 
