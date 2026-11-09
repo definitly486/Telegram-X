@@ -88,14 +88,11 @@ public class SshTunnelService extends Service {
     int flags = PendingIntent.FLAG_UPDATE_CURRENT;
     if (Build.VERSION.SDK_INT >= 23) flags |= PendingIntent.FLAG_IMMUTABLE;
     PendingIntent stopPendingIntent = PendingIntent.getService(this, NOTIFICATION_ID, stopIntent, flags);
-    Notification.Action stopAction = new Notification.Action.Builder(
-      android.R.drawable.ic_media_pause, "Stop", stopPendingIntent
-    ).build();
     return b.setSmallIcon(R.drawable.baseline_notifications_active_24)
       .setContentTitle("SSH tunnel")
       .setContentText("Forwarding the SOCKS5 proxy")
       .setOngoing(true)
-      .addAction(stopAction)
+      .addAction(android.R.drawable.ic_media_pause, "Stop", stopPendingIntent)
       .build();
   }
 
