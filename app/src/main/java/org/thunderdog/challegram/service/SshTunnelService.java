@@ -188,7 +188,14 @@ public class SshTunnelService extends Service {
         s.connect(15000);
         s.setPortForwardingL(LOCAL_PORT, "127.0.0.1", c.remotePort);
         session = s;
-        applyProxy();
+        UI.post(() -> {
+          if (!running || session == null || !session.isConnected()) return;
+          try {
+            applyProxyOnMainThread();
+          } catch (Throwable e) {
+            android.util.Log.e("SshTunnelService", "Failed to apply SSH tunnel proxy", e);
+          }
+        });
         while (running && s.isConnected()) Thread.sleep(1000);
       } catch (InterruptedException ignored) {
         Thread.currentThread().interrupt();
@@ -199,7 +206,8 @@ public class SshTunnelService extends Service {
     }
   }
 
-  private void applyProxy () {
+  // Settings.addOrUpdateProxy() notifies UI adapters and must run on the main thread.
+  private void applyProxyOnMainThread () {
     Settings settings = Settings.instance();
     android.content.SharedPreferences p = getSharedPreferences("ssh_tunnel_config", MODE_PRIVATE);
     Settings.Proxy old = settings.getProxyConfig(p.getInt("previous_proxy_id", Settings.PROXY_ID_NONE));
