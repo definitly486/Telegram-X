@@ -50,6 +50,9 @@
 
 # == THIRDPARTY ==
 
+# Bouncy Castle registers JCA implementations by class name strings.
+-keep class org.bouncycastle.jcajce.provider.asymmetric.edec.** { *; }
+
 # MP4Parser
 -keep class * implements com.coremedia.iso.boxes.Box { *; }
 
