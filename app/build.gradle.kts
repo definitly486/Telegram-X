@@ -341,6 +341,8 @@ android {
   // Packaging
 
   packaging {
+    resources.excludes += "META-INF/versions/9/OSGI-INF/MANIFEST.MF"
+
     Config.SUPPORTED_ABI.forEach { abi ->
       jniLibs.pickFirsts.let { set ->
         set.add("lib/$abi/libc++_shared.so")
