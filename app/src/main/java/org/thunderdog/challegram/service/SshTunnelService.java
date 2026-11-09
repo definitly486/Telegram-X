@@ -8,10 +8,13 @@ import android.content.Context;
 import android.content.Intent;
 import android.os.Build;
 import android.os.IBinder;
+import android.util.Base64;
 import androidx.annotation.Nullable;
 import com.jcraft.jsch.HostKey;
+import com.jcraft.jsch.HostKeyRepository;
 import com.jcraft.jsch.JSch;
 import com.jcraft.jsch.Session;
+import com.jcraft.jsch.UserInfo;
 import org.drinkless.tdlib.TdApi;
 import org.thunderdog.challegram.R;
 import org.thunderdog.challegram.tool.UI;
@@ -19,6 +22,7 @@ import org.thunderdog.challegram.unsorted.Settings;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
 import java.util.Properties;
 
 public class SshTunnelService extends Service {
@@ -86,6 +90,33 @@ public class SshTunnelService extends Service {
       .putInt("previous_proxy_id", s.getAvailableProxyId()).putBoolean("previous_saved", true).apply();
   }
 
+  private static String fingerprint (byte[] key) {
+    try {
+      byte[] digest = MessageDigest.getInstance("SHA-256").digest(key);
+      return "SHA256:" + Base64.encodeToString(digest, Base64.NO_WRAP | Base64.NO_PADDING);
+    } catch (Exception e) {
+      return "unavailable:" + e.getClass().getSimpleName();
+    }
+  }
+
+  private static final class DiagnosticHostKeyRepository implements HostKeyRepository {
+    private final HostKeyRepository delegate;
+    DiagnosticHostKeyRepository (HostKeyRepository delegate) { this.delegate = delegate; }
+    @Override public int check (String host, byte[] key) {
+      int result = delegate.check(host, key);
+      android.util.Log.e("SshTunnelService", "Presented host key: host=" + host
+        + ", fingerprint=" + fingerprint(key) + ", repositoryResult=" + result
+        + " (OK=0, NOT_INCLUDED=1, CHANGED=2)");
+      return result;
+    }
+    @Override public void add (HostKey hostkey, UserInfo ui) { delegate.add(hostkey, ui); }
+    @Override public void remove (String host, String type) { delegate.remove(host, type); }
+    @Override public void remove (String host, String type, byte[] key) { delegate.remove(host, type, key); }
+    @Override public HostKey[] getHostKey () { return delegate.getHostKey(); }
+    @Override public HostKey[] getHostKey (String host, String type) { return delegate.getHostKey(host, type); }
+    @Override public String getKnownHostsRepositoryID () { return delegate.getKnownHostsRepositoryID(); }
+  }
+
   private void tunnelLoop () {
     while (running) {
       try {
@@ -97,16 +128,18 @@ public class SshTunnelService extends Service {
         try { out.write(c.knownHosts.trim().getBytes(StandardCharsets.UTF_8)); out.write('\n'); } finally { out.close(); }
         JSch jsch = new JSch();
         jsch.setKnownHosts(kh.getAbsolutePath());
-        HostKey[] loaded = jsch.getHostKeyRepository().getHostKey(c.host, null);
+        HostKeyRepository repository = jsch.getHostKeyRepository();
+        HostKey[] loaded = repository.getHostKey(c.host, null);
         android.util.Log.i("SshTunnelService", "Known-host check: host=" + c.host + ", port=" + c.sshPort
           + ", fileExists=" + kh.isFile() + ", fileLength=" + kh.length()
           + ", loadedEntries=" + (loaded == null ? 0 : loaded.length));
         if (loaded != null) {
           for (HostKey key : loaded) {
-            android.util.Log.i("SshTunnelService", "Loaded known host: host=" + key.getHost()
-              + ", type=" + key.getType());
+            android.util.Log.i("SshTunnelService", "Expected host key: host=" + key.getHost()
+              + ", type=" + key.getType() + ", fingerprint=" + fingerprint(key.getKey()));
           }
         }
+        jsch.setHostKeyRepository(new DiagnosticHostKeyRepository(repository));
         Session s = jsch.getSession(c.username, c.host, c.sshPort);
         s.setPassword(c.password);
         Properties options = new Properties();
