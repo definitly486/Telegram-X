@@ -122,7 +122,7 @@ public final class ProxyBackupUi {
   private static void runImport(BaseActivity context, Uri uri, String password) {
     UI.showToast("Importing proxy settings…", Toast.LENGTH_SHORT);
     Background.instance().post(() -> {
-      List<ProxyBackup.ImportedProxy> imported = null;
+      ProxyBackup.ImportedBackup imported = null;
       String error = null;
       boolean wrongPassword = false;
       try (InputStream in = context.getContentResolver().openInputStream(uri)) {
