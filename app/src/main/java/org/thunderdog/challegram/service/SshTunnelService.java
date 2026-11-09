@@ -23,9 +23,12 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.security.Provider;
 import java.security.Security;
-import net.i2p.crypto.eddsa.EdDSASecurityProvider;
+import java.security.Signature;
 import java.util.Properties;
+import org.bouncycastle.jce.provider.BouncyCastleProvider;
 
 public class SshTunnelService extends Service {
   private static final String STOP = "org.thunderdog.challegram.STOP_SSH_TUNNEL";
@@ -101,6 +104,34 @@ public class SshTunnelService extends Service {
     }
   }
 
+  private static void ensureEd25519Support () throws Exception {
+    try {
+      Signature.getInstance("Ed25519");
+      android.util.Log.i("SshTunnelService", "Ed25519 signature available from "
+        + Signature.getInstance("Ed25519").getProvider().getName());
+      return;
+    } catch (NoSuchAlgorithmException ignored) { }
+
+    Provider current = Security.getProvider(BouncyCastleProvider.PROVIDER_NAME);
+    if (current != null) {
+      try {
+        Signature.getInstance("Ed25519", current);
+        Security.insertProviderAt(current, 1);
+        android.util.Log.i("SshTunnelService", "Ed25519 signature available from existing "
+          + current.getName() + " provider");
+        return;
+      } catch (NoSuchAlgorithmException ignored) {
+        // Android may ship an older BC provider without Ed25519. Replace it in this app process.
+        Security.removeProvider(BouncyCastleProvider.PROVIDER_NAME);
+      }
+    }
+
+    Security.insertProviderAt(new BouncyCastleProvider(), 1);
+    Signature signature = Signature.getInstance("Ed25519");
+    android.util.Log.i("SshTunnelService", "Ed25519 signature available from "
+      + signature.getProvider().getName() + " provider");
+  }
+
   private static final class DiagnosticHostKeyRepository implements HostKeyRepository {
     private final HostKeyRepository delegate;
     DiagnosticHostKeyRepository (HostKeyRepository delegate) { this.delegate = delegate; }
@@ -128,12 +159,8 @@ public class SshTunnelService extends Service {
         File kh = new File(getFilesDir(), "ssh_tunnel_known_hosts");
         FileOutputStream out = new FileOutputStream(kh, false);
         try { out.write(c.knownHosts.trim().getBytes(StandardCharsets.UTF_8)); out.write('\n'); } finally { out.close(); }
-        // Register the bundled EdDSA provider before JSch probes available host-key signatures.
-        if (Security.getProvider(EdDSASecurityProvider.PROVIDER_NAME) == null) {
-          Security.addProvider(new EdDSASecurityProvider());
-        }
-        android.util.Log.i("SshTunnelService", "EdDSA provider: "
-          + (Security.getProvider(EdDSASecurityProvider.PROVIDER_NAME) != null ? "registered" : "unavailable"));
+        // JSch probes the standard JCA "Ed25519" algorithm before sending SSH KEXINIT.
+        ensureEd25519Support();
         JSch jsch = new JSch();
         jsch.setKnownHosts(kh.getAbsolutePath());
         HostKeyRepository repository = jsch.getHostKeyRepository();
