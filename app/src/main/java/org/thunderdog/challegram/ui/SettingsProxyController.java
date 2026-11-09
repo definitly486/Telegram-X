@@ -459,6 +459,12 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
     items.add(new ListItem(ListItem.TYPE_SHADOW_BOTTOM));
     items.add(new ListItem(ListItem.TYPE_DESCRIPTION, 0, 0, R.string.ProxyInfo));
 
+    items.add(new ListItem(ListItem.TYPE_HEADER, 0, 0, R.string.SshTunnelSettings));
+    items.add(new ListItem(ListItem.TYPE_SHADOW_TOP));
+    items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_sshTunnel, 0, R.string.SshTunnelSettings));
+    items.add(new ListItem(ListItem.TYPE_SHADOW_BOTTOM));
+    items.add(new ListItem(ListItem.TYPE_DESCRIPTION, 0, 0, R.string.SshTunnelSettingsInfo));
+
     hasProxyAutoSwitchSettings = !proxies.isEmpty();
     if (hasProxyAutoSwitchSettings) {
       Collections.addAll(items, newAutoSwitchItems());
@@ -479,11 +485,6 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
     if (canUseForCalls) {
       addProxyCallItems(items);
     }
-    items.add(new ListItem(ListItem.TYPE_HEADER, 0, 0, R.string.SshTunnelSettings));
-    items.add(new ListItem(ListItem.TYPE_SHADOW_TOP));
-    items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_sshTunnel, 0, R.string.SshTunnelSettings));
-    items.add(new ListItem(ListItem.TYPE_SHADOW_BOTTOM));
-    items.add(new ListItem(ListItem.TYPE_DESCRIPTION, 0, 0, R.string.SshTunnelSettingsInfo));
 
     adapter = new SettingsAdapter(this) {
       @Override
