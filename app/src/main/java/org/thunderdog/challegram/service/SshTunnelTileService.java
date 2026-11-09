@@ -30,8 +30,8 @@ public final class SshTunnelTileService extends TileService {
     boolean enabled = SshTunnelConfig.isEnabled(this);
     tile.setState(enabled ? Tile.STATE_ACTIVE : Tile.STATE_INACTIVE);
     tile.setLabel("SSH tunnel");
-    tile.setContentDescription(enabled ? "Stop SSH tunnel" : "Start SSH tunnel");
     if (Build.VERSION.SDK_INT >= 29) {
+      tile.setContentDescription(enabled ? "Stop SSH tunnel" : "Start SSH tunnel");
       tile.setSubtitle(enabled ? "On" : "Off");
     }
     tile.updateTile();
