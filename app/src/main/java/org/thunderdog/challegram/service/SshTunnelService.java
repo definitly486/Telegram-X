@@ -144,6 +144,8 @@ public class SshTunnelService extends Service {
         s.setPassword(c.password);
         Properties options = new Properties();
         options.setProperty("StrictHostKeyChecking", "yes");
+        // Match the explicitly pinned ED25519 host key; do not silently select another server key type.
+        options.setProperty("server_host_key", "ssh-ed25519");
         options.setProperty("PreferredAuthentications", "password");
         s.setConfig(options);
         s.setServerAliveInterval(10000);
