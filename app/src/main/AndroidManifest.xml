@@ -146,6 +146,19 @@
       android:stopWithTask="false">
       <property android:name="android.app.PROPERTY_SPECIAL_USE_FGS_SUBTYPE" android:value="Persistent SSH tunnel for the user-configured SOCKS5 proxy" />
     </service>
+    <service
+      android:name=".service.SshTunnelTileService"
+      android:label="SSH tunnel"
+      android:icon="@drawable/baseline_notifications_active_24"
+      android:permission="android.permission.BIND_QUICK_SETTINGS_TILE"
+      android:exported="true">
+      <intent-filter>
+        <action android:name="android.service.quicksettings.action.QS_TILE" />
+      </intent-filter>
+      <meta-data
+        android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+        android:value="true" />
+    </service>
     <receiver android:name=".service.SshTunnelBootReceiver" android:enabled="true" android:exported="false">
       <intent-filter><action android:name="android.intent.action.BOOT_COMPLETED" /></intent-filter>
     </receiver>
