@@ -58,13 +58,13 @@ public final class ProxyBackupUi {
         if (!password.equals(repeat)) {
           UI.showToast("Passwords do not match", Toast.LENGTH_LONG);
         } else {
-          pickExportTarget(controller, proxies, password, SshTunnelConfig.load(controller.context()), SshTunnelConfig.isEnabled(controller.context()));
+          pickExportTarget(controller, proxies, password);
         }
       })
     );
   }
 
-  private static void pickExportTarget(ViewController<?> controller, List<Settings.Proxy> proxies, String password, SshTunnelConfig sshTunnel, boolean sshEnabled) {
+  private static void pickExportTarget(ViewController<?> controller, List<Settings.Proxy> proxies, String password) {
     BaseActivity context = controller.context();
     Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT)
       .addCategory(Intent.CATEGORY_OPENABLE)
@@ -73,7 +73,7 @@ public final class ProxyBackupUi {
     context.putActivityResultHandler(REQUEST_EXPORT, (requestCode, resultCode, data) -> {
       context.putActivityResultHandler(REQUEST_EXPORT, null);
       Uri uri = resultCode == Activity.RESULT_OK && data != null ? data.getData() : null;
-      if (uri != null) runExport(context, uri, proxies, password, sshTunnel, sshEnabled);
+      if (uri != null) runExport(context, uri, proxies, password);
     });
     try {
       UI.startActivityForResult(intent, REQUEST_EXPORT);
@@ -83,17 +83,30 @@ public final class ProxyBackupUi {
     }
   }
 
-  private static void runExport(BaseActivity context, Uri uri, List<Settings.Proxy> proxies, String password, SshTunnelConfig sshTunnel, boolean sshEnabled) {
+  private static void runExport(BaseActivity context, Uri uri, List<Settings.Proxy> proxies, String password) {
     Background.instance().post(() -> {
       String error = null;
+      boolean sshIncluded = false;
       try (OutputStream out = context.getContentResolver().openOutputStream(uri)) {
         if (out == null) throw new java.io.IOException("Unable to open the selected file");
-        ProxyBackup.export(proxies, out, password.toCharArray(), sshTunnel, sshEnabled);
+        // Read the latest SSH settings when the destination has been selected, not before
+        // the file picker was opened.
+        android.content.Context appContext = context.getApplicationContext();
+        SshTunnelConfig sshTunnel = SshTunnelConfig.load(appContext);
+        boolean sshEnabled = SshTunnelConfig.isEnabled(appContext);
+        android.util.Log.i("ProxyBackup", "Export: sshEnabled=" + sshEnabled
+          + ", sshHostConfigured=" + !sshTunnel.host.trim().isEmpty()
+          + ", sshPasswordAvailable=" + !sshTunnel.password.isEmpty());
+        sshIncluded = ProxyBackup.export(proxies, out, password.toCharArray(), sshTunnel, sshEnabled);
       } catch (Throwable t) {
         error = t.getMessage() != null ? t.getMessage() : t.toString();
       }
       final String result = error;
-      UI.post(() -> UI.showToast(result == null ? "Encrypted proxy backup exported" : "Export failed: " + result, Toast.LENGTH_LONG));
+      final boolean finalSshIncluded = sshIncluded;
+      UI.post(() -> UI.showToast(result == null
+        ? (finalSshIncluded ? "Encrypted proxy backup exported, including SSH tunnel settings"
+          : "Encrypted proxy backup exported (no SSH tunnel settings were saved)")
+        : "Export failed: " + result, Toast.LENGTH_LONG));
     });
   }
 
