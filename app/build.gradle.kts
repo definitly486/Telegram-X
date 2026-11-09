@@ -410,8 +410,8 @@ dependencies {
   // OkHttp: https://github.com/square/okhttp/blob/master/CHANGELOG.md
   // SSH tunnel: JSch implementation with maintained Android-compatible fork
   implementation("com.github.mwiede:jsch:0.2.20")
-  // Ed25519 host-key signatures on Android runtimes without a native EdDSA provider.
-  implementation("net.i2p.crypto:eddsa:0.3.0")
+  // JSch requires a JCA provider exposing the standard Ed25519 algorithm on Android.
+  implementation("org.bouncycastle:bcprov-jdk18on:1.86")
   implementation("com.squareup.okhttp3:okhttp:4.12.0")
   // ShortcutBadger: https://github.com/leolin310148/ShortcutBadger
   implementation("me.leolin:ShortcutBadger:1.1.22@aar")
