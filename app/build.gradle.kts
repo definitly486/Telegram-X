@@ -408,6 +408,8 @@ dependencies {
   // The Checker Framework: https://checkerframework.org/CHANGELOG.md
   compileOnly("org.checkerframework:checker-qual:3.49.0")
   // OkHttp: https://github.com/square/okhttp/blob/master/CHANGELOG.md
+  // SSH tunnel: JSch implementation with maintained Android-compatible fork
+  implementation("com.github.mwiede:jsch:0.2.20")
   implementation("com.squareup.okhttp3:okhttp:4.12.0")
   // ShortcutBadger: https://github.com/leolin310148/ShortcutBadger
   implementation("me.leolin:ShortcutBadger:1.1.22@aar")
