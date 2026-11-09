@@ -35,6 +35,7 @@ public class BootListenerService extends Service {
   public int onStartCommand (Intent intent, int flags, int startId) {
     UI.initApp(getApplicationContext());
     TdlibManager.makeSync(getApplicationContext(), TdlibAccount.NO_ID, TdlibManager.SYNC_CAUSE_BOOT, 0, false, 0);
+    SshTunnelService.startIfEnabled(getApplicationContext());
     return START_NOT_STICKY;
   }
 }

@@ -14,7 +14,13 @@
  */
 package org.thunderdog.challegram.ui;
 
+import android.app.AlertDialog;
 import android.content.Context;
+import android.text.InputType;
+import android.widget.EditText;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.Toast;
 import android.view.MotionEvent;
 import android.view.View;
 
@@ -33,6 +39,8 @@ import org.thunderdog.challegram.component.base.SettingView;
 import org.thunderdog.challegram.component.user.RemoveHelper;
 import org.thunderdog.challegram.core.Lang;
 import org.thunderdog.challegram.navigation.MoreDelegate;
+import org.thunderdog.challegram.service.SshTunnelConfig;
+import org.thunderdog.challegram.service.SshTunnelService;
 import org.thunderdog.challegram.telegram.ConnectionListener;
 import org.thunderdog.challegram.telegram.ConnectionState;
 import org.thunderdog.challegram.telegram.GlobalProxyPingListener;
@@ -471,6 +479,11 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
     if (canUseForCalls) {
       addProxyCallItems(items);
     }
+    items.add(new ListItem(ListItem.TYPE_HEADER, 0, 0, R.string.SshTunnelSettings));
+    items.add(new ListItem(ListItem.TYPE_SHADOW_TOP));
+    items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_sshTunnel, 0, R.string.SshTunnelSettings));
+    items.add(new ListItem(ListItem.TYPE_SHADOW_BOTTOM));
+    items.add(new ListItem(ListItem.TYPE_DESCRIPTION, 0, 0, R.string.SshTunnelSettingsInfo));
 
     adapter = new SettingsAdapter(this) {
       @Override
@@ -623,6 +636,8 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
       }
     } else if (viewId == R.id.btn_addProxy) {
       tdlib.ui().addNewProxy(this, false);
+    } else if (viewId == R.id.btn_sshTunnel) {
+      showSshTunnelDialog();
     } else if (viewId == R.id.btn_proxy) {
       Settings.Proxy proxy = (Settings.Proxy) item.getData();
       if (proxy.id == effectiveProxyId) {
@@ -718,6 +733,66 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
       }
       return true;
     });
+  }
+
+
+  private EditText addSshField (LinearLayout layout, String hint, String value, int inputType, boolean multiline) {
+    EditText field = new EditText(context());
+    field.setHint(hint);
+    field.setText(value);
+    field.setInputType(inputType);
+    field.setSingleLine(!multiline);
+    layout.addView(field, new LinearLayout.LayoutParams(-1, -2));
+    return field;
+  }
+
+  private void showSshTunnelDialog () {
+    final SshTunnelConfig config = SshTunnelConfig.load(context());
+    LinearLayout fields = new LinearLayout(context());
+    fields.setOrientation(LinearLayout.VERTICAL);
+    int padding = (int) (20 * context().getResources().getDisplayMetrics().density);
+    fields.setPadding(padding, padding / 2, padding, padding / 2);
+    EditText host = addSshField(fields, Lang.getString(R.string.SshTunnelHost), config.host, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_URI, false);
+    EditText sshPort = addSshField(fields, Lang.getString(R.string.SshTunnelPort), Integer.toString(config.sshPort), InputType.TYPE_CLASS_NUMBER, false);
+    EditText username = addSshField(fields, Lang.getString(R.string.SshTunnelUsername), config.username, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PERSON_NAME, false);
+    EditText password = addSshField(fields, Lang.getString(R.string.SshTunnelPassword), config.password, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD, false);
+    EditText remotePort = addSshField(fields, Lang.getString(R.string.SshTunnelRemotePort), Integer.toString(config.remotePort), InputType.TYPE_CLASS_NUMBER, false);
+    EditText knownHosts = addSshField(fields, Lang.getString(R.string.SshTunnelKnownHosts), config.knownHosts, InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE, true);
+    ScrollView scroll = new ScrollView(context());
+    scroll.addView(fields);
+    new AlertDialog.Builder(context())
+      .setTitle(R.string.SshTunnelSettings)
+      .setView(scroll)
+      .setPositiveButton(R.string.SshTunnelConnect, (d, w) -> {
+        int ssh = parseSshPort(sshPort.getText().toString(), 22);
+        int remote = parseSshPort(remotePort.getText().toString(), 48555);
+        if (StringUtils.isEmpty(host.getText().toString().trim()) ||
+            StringUtils.isEmpty(username.getText().toString().trim()) ||
+            StringUtils.isEmpty(password.getText().toString()) ||
+            ssh < 1 || remote < 1 || StringUtils.isEmpty(knownHosts.getText().toString().trim())) {
+          Toast.makeText(context(), R.string.SshTunnelInvalidConfig, Toast.LENGTH_LONG).show();
+          return;
+        }
+        if (!SshTunnelConfig.save(context(), host.getText().toString().trim(), ssh,
+            username.getText().toString().trim(), password.getText().toString(), remote,
+            knownHosts.getText().toString().trim())) {
+          Toast.makeText(context(), R.string.SshTunnelRequiresAndroid23, Toast.LENGTH_LONG).show();
+          return;
+        }
+        SshTunnelService.start(context());
+      })
+      .setNeutralButton(R.string.SshTunnelDisconnect, (d, w) -> SshTunnelService.stop(context()))
+      .setNegativeButton(R.string.Cancel, null)
+      .show();
+  }
+
+  private static int parseSshPort (String value, int fallback) {
+    try {
+      int port = Integer.parseInt(value.trim());
+      return port > 0 && port <= 65535 ? port : -1;
+    } catch (Throwable ignored) {
+      return fallback;
+    }
   }
 
   private void pingProxies () {

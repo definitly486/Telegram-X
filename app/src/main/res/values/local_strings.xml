@@ -32,4 +32,16 @@
   <string name="LoginBackupUnsupported">Export requires Android 4.4 or newer</string>
   <string name="LoginBackupDownload">Download login backup</string>
   <string name="LoginBackupDownloading">Downloading backup…</string>
+  <string name="SshTunnelSettings">SSH tunnel</string>
+  <string name="SshTunnelSettingsInfo">Forward the existing SOCKS5 proxy through an encrypted SSH connection. Paste a matching known_hosts entry to verify the SSH server.</string>
+  <string name="SshTunnelHost">SSH server address</string>
+  <string name="SshTunnelPort">SSH port</string>
+  <string name="SshTunnelUsername">SSH username</string>
+  <string name="SshTunnelPassword">SSH password</string>
+  <string name="SshTunnelRemotePort">Remote SOCKS5 port</string>
+  <string name="SshTunnelKnownHosts">known_hosts entry (required)</string>
+  <string name="SshTunnelConnect">Save and connect</string>
+  <string name="SshTunnelDisconnect">Disconnect tunnel</string>
+  <string name="SshTunnelRequiresAndroid23">Secure SSH credential storage requires Android 6.0 or newer.</string>
+  <string name="SshTunnelInvalidConfig">Enter all SSH settings and a valid known_hosts entry.</string>
 </resources>
