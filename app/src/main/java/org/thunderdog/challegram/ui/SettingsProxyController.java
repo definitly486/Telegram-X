@@ -99,6 +99,9 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
       }
     }
 
+    ids.append(R.id.btn_sshTunnel);
+    strings.append(Lang.getString(R.string.SshTunnelSettings));
+
     ids.append(R.id.btn_exportProxyBackup);
     strings.append("Export proxy settings");
     ids.append(R.id.btn_importProxyBackup);
@@ -137,7 +140,9 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
 
   @Override
   public void onMoreItemPressed (int id) {
-    if (id == R.id.btn_exportProxyBackup) {
+    if (id == R.id.btn_sshTunnel) {
+      showSshTunnelDialog();
+    } else if (id == R.id.btn_exportProxyBackup) {
       ProxyBackupUi.startExport(this);
     } else if (id == R.id.btn_importProxyBackup) {
       ProxyBackupUi.startImport(this);
@@ -854,7 +859,7 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
   }
 
   private int cellIndexToProxyIndex (int cellIndex) {
-    int headerItemCount = 7;
+    int headerItemCount = 12;
     if (hasProxyAutoSwitchSettings) {
       headerItemCount += 4;
     }
@@ -869,7 +874,7 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
   }
 
   private int indexOfProxyCellByProxyIndex (int proxyIndex, int proxyId) {
-    int headerItemCount = 7;
+    int headerItemCount = 12;
     if (hasProxyAutoSwitchSettings) {
       headerItemCount += 4;
     }
@@ -881,7 +886,7 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
 
   private int indexOfProxy (int proxyId) {
     if (proxyId == Settings.PROXY_ID_NONE) {
-      return 5 + (hasProxyAutoSwitchSettings ? 4 : 0); // adapter.indexOfViewById(R.id.btn_noProxy);
+      return 10 + (hasProxyAutoSwitchSettings ? 4 : 0); // adapter.indexOfViewById(R.id.btn_noProxy);
     } else {
       return adapter.indexOfViewByLongId(proxyId);
     }
