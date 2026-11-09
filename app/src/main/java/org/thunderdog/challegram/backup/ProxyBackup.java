@@ -52,8 +52,8 @@ public final class ProxyBackup {
 
   private ProxyBackup() { }
 
-  public static void export(List<Settings.Proxy> proxies, OutputStream output, char[] password,
-                            SshTunnelConfig sshTunnel, boolean sshEnabled)
+  public static boolean export(List<Settings.Proxy> proxies, OutputStream output, char[] password,
+                               SshTunnelConfig sshTunnel, boolean sshEnabled)
       throws IOException, GeneralSecurityException, JSONException {
     JSONArray array = new JSONArray();
     for (Settings.Proxy item : proxies) {
@@ -95,7 +95,17 @@ public final class ProxyBackup {
     root.put("format", "telegram-x-proxies");
     root.put("version", VERSION);
     root.put("proxies", array);
-    if (sshTunnel != null && !sshTunnel.host.trim().isEmpty()) {
+    boolean hasSshSettings = sshTunnel != null && !sshTunnel.host.trim().isEmpty();
+    if (sshEnabled && !hasSshSettings) {
+      throw new IOException("SSH tunnel is enabled, but its configuration was not found. Open SSH tunnel settings and save them again.");
+    }
+    if (hasSshSettings) {
+      if (sshTunnel.username.trim().isEmpty() || sshTunnel.password.isEmpty()
+          || sshTunnel.knownHosts.trim().isEmpty()
+          || sshTunnel.sshPort < 1 || sshTunnel.sshPort > 65535
+          || sshTunnel.remotePort < 1 || sshTunnel.remotePort > 65535) {
+        throw new IOException("SSH tunnel settings are incomplete and cannot be exported. Re-enter and save the SSH settings.");
+      }
       JSONObject ssh = new JSONObject();
       ssh.put("host", sshTunnel.host);
       ssh.put("sshPort", sshTunnel.sshPort);
@@ -123,6 +133,7 @@ public final class ProxyBackup {
     output.flush();
     java.util.Arrays.fill(key, (byte) 0);
     java.util.Arrays.fill(plain, (byte) 0);
+    return hasSshSettings;
   }
 
   public static ImportedBackup importBackup(InputStream input, char[] password)
