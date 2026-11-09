@@ -136,7 +136,7 @@ public class SshTunnelService extends Service {
         if (loaded != null) {
           for (HostKey key : loaded) {
             android.util.Log.i("SshTunnelService", "Expected host key: host=" + key.getHost()
-              + ", type=" + key.getType() + ", fingerprint=" + fingerprint(key.getKey()));
+              + ", type=" + key.getType() + ", fingerprint=" + fingerprint(Base64.decode(key.getKey(), Base64.DEFAULT)));
           }
         }
         jsch.setHostKeyRepository(new DiagnosticHostKeyRepository(repository));
