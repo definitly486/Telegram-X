@@ -27,6 +27,7 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import org.drinkless.tdlib.TdApi;
 import org.thunderdog.challegram.BuildConfig;
+import org.thunderdog.challegram.backup.ProxyBackupUi;
 import org.thunderdog.challegram.R;
 import org.thunderdog.challegram.component.base.SettingView;
 import org.thunderdog.challegram.component.user.RemoveHelper;
@@ -90,6 +91,11 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
       }
     }
 
+    ids.append(R.id.btn_exportProxyBackup);
+    strings.append("Export proxy settings");
+    ids.append(R.id.btn_importProxyBackup);
+    strings.append("Import proxy settings");
+
     if (BuildConfig.DEBUG) {
       ids.append(R.id.btn_test);
       strings.append("Auto-select proxy");
@@ -123,7 +129,11 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
 
   @Override
   public void onMoreItemPressed (int id) {
-    if (id == R.id.btn_test) {
+    if (id == R.id.btn_exportProxyBackup) {
+      ProxyBackupUi.startExport(this);
+    } else if (id == R.id.btn_importProxyBackup) {
+      ProxyBackupUi.startImport(this);
+    } else if (id == R.id.btn_test) {
       tdlib.resolveConnectionIssues();
     } else if (id == R.id.btn_toggleErrors) {
       Settings.instance().toggleProxySetting(Settings.PROXY_FLAG_SHOW_ERRORS);
