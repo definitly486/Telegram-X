@@ -3,6 +3,7 @@ package org.thunderdog.challegram.service;
 import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
+import android.app.PendingIntent;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
@@ -83,8 +84,19 @@ public class SshTunnelService extends Service {
 
   private Notification notification () {
     Notification.Builder b = Build.VERSION.SDK_INT >= 26 ? new Notification.Builder(this, CHANNEL) : new Notification.Builder(this);
+    Intent stopIntent = new Intent(this, SshTunnelService.class).setAction(STOP);
+    int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+    if (Build.VERSION.SDK_INT >= 23) flags |= PendingIntent.FLAG_IMMUTABLE;
+    PendingIntent stopPendingIntent = PendingIntent.getService(this, NOTIFICATION_ID, stopIntent, flags);
+    Notification.Action stopAction = new Notification.Action.Builder(
+      android.R.drawable.ic_media_pause, "Stop", stopPendingIntent
+    ).build();
     return b.setSmallIcon(R.drawable.baseline_notifications_active_24)
-      .setContentTitle("SSH tunnel").setContentText("Forwarding the SOCKS5 proxy").setOngoing(true).build();
+      .setContentTitle("SSH tunnel")
+      .setContentText("Forwarding the SOCKS5 proxy")
+      .setOngoing(true)
+      .addAction(stopAction)
+      .build();
   }
 
   private void rememberProxy () {
