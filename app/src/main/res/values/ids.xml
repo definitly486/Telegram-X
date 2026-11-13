@@ -1416,5 +1416,6 @@
   <item type="id" name="btn_playback_speed_2_0" />
   <item type="id" name="btn_exportProxyBackup" />
   <item type="id" name="btn_importProxyBackup" />
+  <item type="id" name="btn_downloadProxyBackup" />
   <item type="id" name="btn_sshTunnel" />
 </resources>
