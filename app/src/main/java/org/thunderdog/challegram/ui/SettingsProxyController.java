@@ -469,12 +469,8 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
     items.add(new ListItem(ListItem.TYPE_SHADOW_BOTTOM));
     items.add(new ListItem(ListItem.TYPE_DESCRIPTION, 0, 0, R.string.ProxyInfo));
 
-    items.add(new ListItem(ListItem.TYPE_HEADER, 0, 0, R.string.SshTunnelSettings));
-    items.add(new ListItem(ListItem.TYPE_SHADOW_TOP));
-    items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_sshTunnel, 0, R.string.SshTunnelSettings));
-    items.add(new ListItem(ListItem.TYPE_SHADOW_BOTTOM));
-    items.add(new ListItem(ListItem.TYPE_DESCRIPTION, 0, 0, R.string.SshTunnelSettingsInfo));
-
+    // Keep proxy backup actions at the top of the screen so they remain
+    // accessible even when no proxies or SSH tunnel settings are configured.
     items.add(new ListItem(ListItem.TYPE_HEADER, 0, 0, R.string.ProxyBackup));
     items.add(new ListItem(ListItem.TYPE_SHADOW_TOP));
     items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_exportProxyBackup, 0, R.string.ProxyBackupExport));
@@ -482,6 +478,12 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
     items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_downloadProxyBackup, 0, R.string.ProxyBackupDownload));
     items.add(new ListItem(ListItem.TYPE_SHADOW_BOTTOM));
     items.add(new ListItem(ListItem.TYPE_DESCRIPTION, 0, 0, R.string.ProxyBackupInfo));
+
+    items.add(new ListItem(ListItem.TYPE_HEADER, 0, 0, R.string.SshTunnelSettings));
+    items.add(new ListItem(ListItem.TYPE_SHADOW_TOP));
+    items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_sshTunnel, 0, R.string.SshTunnelSettings));
+    items.add(new ListItem(ListItem.TYPE_SHADOW_BOTTOM));
+    items.add(new ListItem(ListItem.TYPE_DESCRIPTION, 0, 0, R.string.SshTunnelSettingsInfo));
 
     hasProxyAutoSwitchSettings = !proxies.isEmpty();
     if (hasProxyAutoSwitchSettings) {
