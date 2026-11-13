@@ -31,6 +31,11 @@ import org.thunderdog.challegram.widget.MaterialEditTextGroup;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.net.HttpURLConnection;
+import java.net.URL;
 import java.util.List;
 
 import me.vkryl.core.lambda.RunnableData;
@@ -132,13 +137,72 @@ public final class ProxyBackupUi {
     }
   }
 
+  public static void startDownloadImport(@NonNull ViewController<?> controller) {
+    if (Build.VERSION.SDK_INT < 19) {
+      UI.showToast("Encrypted proxy backups require Android 4.4 or newer", Toast.LENGTH_LONG);
+      return;
+    }
+    BaseActivity context = controller.context();
+    UI.showToast("Downloading proxy settings…", Toast.LENGTH_SHORT);
+    Background.instance().post(() -> {
+      byte[] downloaded = null;
+      String error = null;
+      HttpURLConnection connection = null;
+      try {
+        connection = (HttpURLConnection) new URL("https://github.com/definitly486/definitly486/releases/download/tgxproxy/telegram-x-proxies.tgxproxy").openConnection();
+        connection.setConnectTimeout(15000);
+        connection.setReadTimeout(20000);
+        connection.setInstanceFollowRedirects(true);
+        connection.setRequestProperty("User-Agent", "Telegram-X");
+        int status = connection.getResponseCode();
+        if (status != HttpURLConnection.HTTP_OK) throw new IOException("Download failed: HTTP " + status);
+        int contentLength = connection.getContentLength();
+        if (contentLength > 1024 * 1024) throw new IOException("Proxy backup is too large");
+        try (InputStream in = connection.getInputStream();
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+          byte[] buffer = new byte[8192];
+          int total = 0, read;
+          while ((read = in.read(buffer)) != -1) {
+            total += read;
+            if (total > 1024 * 1024) throw new IOException("Proxy backup is too large");
+            out.write(buffer, 0, read);
+          }
+          downloaded = out.toByteArray();
+        }
+        if (downloaded.length == 0) throw new IOException("Downloaded proxy backup is empty");
+      } catch (Throwable t) {
+        error = t.getMessage() != null ? t.getMessage() : t.toString();
+      } finally {
+        if (connection != null) connection.disconnect();
+      }
+      final byte[] file = downloaded;
+      final String downloadError = error;
+      UI.post(() -> {
+        if (downloadError != null) {
+          UI.showToast("Download failed: " + downloadError, Toast.LENGTH_LONG);
+        } else {
+          askPassword(controller, "Proxy backup password", false,
+            password -> runImport(context, () -> new ByteArrayInputStream(file), password));
+        }
+      });
+    });
+  }
+
+  private interface InputStreamSource {
+    InputStream open() throws IOException;
+  }
+
   private static void runImport(BaseActivity context, Uri uri, String password) {
+    runImport(context, () -> context.getContentResolver().openInputStream(uri), password);
+  }
+
+  private static void runImport(BaseActivity context, InputStreamSource source, String password) {
     UI.showToast("Importing proxy settings…", Toast.LENGTH_SHORT);
     Background.instance().post(() -> {
       ProxyBackup.ImportedBackup imported = null;
       String error = null;
       boolean wrongPassword = false;
-      try (InputStream in = context.getContentResolver().openInputStream(uri)) {
+      try (InputStream in = source.open()) {
         if (in == null) throw new java.io.IOException("Unable to open the selected file");
         imported = ProxyBackup.importBackup(in, password.toCharArray());
       } catch (ProxyBackup.BadPasswordException e) {
