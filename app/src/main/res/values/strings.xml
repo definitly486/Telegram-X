@@ -5567,4 +5567,9 @@
   <string name="xBotUsers_one">%1$s monthly user</string>
   <string name="xBotUsers_other">%1$s monthly users</string>
 
+  <string name="ProxyBackup">Proxy backup</string>
+  <string name="ProxyBackupExport">Export proxy settings</string>
+  <string name="ProxyBackupImport">Import proxy settings</string>
+  <string name="ProxyBackupDownload">Download proxy settings</string>
+  <string name="ProxyBackupInfo">Encrypted proxy settings can be imported or exported here. Downloading retrieves the maintained proxy list from GitHub.</string>
 </resources>
