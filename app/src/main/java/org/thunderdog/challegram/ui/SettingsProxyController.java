@@ -107,6 +107,9 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
     ids.append(R.id.btn_importProxyBackup);
     strings.append("Import proxy settings");
 
+    ids.append(R.id.btn_downloadProxyBackup);
+    strings.append("Download proxy settings");
+
     if (BuildConfig.DEBUG) {
       ids.append(R.id.btn_test);
       strings.append("Auto-select proxy");
@@ -146,6 +149,8 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
       ProxyBackupUi.startExport(this);
     } else if (id == R.id.btn_importProxyBackup) {
       ProxyBackupUi.startImport(this);
+    } else if (id == R.id.btn_downloadProxyBackup) {
+      ProxyBackupUi.startDownloadImport(this);
     } else if (id == R.id.btn_test) {
       tdlib.resolveConnectionIssues();
     } else if (id == R.id.btn_toggleErrors) {
@@ -470,6 +475,14 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
     items.add(new ListItem(ListItem.TYPE_SHADOW_BOTTOM));
     items.add(new ListItem(ListItem.TYPE_DESCRIPTION, 0, 0, R.string.SshTunnelSettingsInfo));
 
+    items.add(new ListItem(ListItem.TYPE_HEADER, 0, 0, R.string.ProxyBackup));
+    items.add(new ListItem(ListItem.TYPE_SHADOW_TOP));
+    items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_exportProxyBackup, 0, R.string.ProxyBackupExport));
+    items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_importProxyBackup, 0, R.string.ProxyBackupImport));
+    items.add(new ListItem(ListItem.TYPE_SETTING, R.id.btn_downloadProxyBackup, 0, R.string.ProxyBackupDownload));
+    items.add(new ListItem(ListItem.TYPE_SHADOW_BOTTOM));
+    items.add(new ListItem(ListItem.TYPE_DESCRIPTION, 0, 0, R.string.ProxyBackupInfo));
+
     hasProxyAutoSwitchSettings = !proxies.isEmpty();
     if (hasProxyAutoSwitchSettings) {
       Collections.addAll(items, newAutoSwitchItems());
@@ -642,6 +655,12 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
       }
     } else if (viewId == R.id.btn_addProxy) {
       tdlib.ui().addNewProxy(this, false);
+    } else if (viewId == R.id.btn_exportProxyBackup) {
+      ProxyBackupUi.startExport(this);
+    } else if (viewId == R.id.btn_importProxyBackup) {
+      ProxyBackupUi.startImport(this);
+    } else if (viewId == R.id.btn_downloadProxyBackup) {
+      ProxyBackupUi.startDownloadImport(this);
     } else if (viewId == R.id.btn_sshTunnel) {
       showSshTunnelDialog();
     } else if (viewId == R.id.btn_proxy) {
