@@ -50,6 +50,16 @@ public class SshTunnelService extends Service {
     Intent i = new Intent(c, SshTunnelService.class).setAction(STOP);
     if (Build.VERSION.SDK_INT >= 26) c.startForegroundService(i); else c.startService(i);
   }
+
+  // Stop the SSH worker immediately when its generated SOCKS5 entry is removed.
+  // Clearing "enabled" here prevents a queued UI callback or reconnect from recreating it.
+  public static boolean stopIfTunnelProxy (Context c, int proxyId) {
+    android.content.SharedPreferences p = c.getSharedPreferences("ssh_tunnel_config", MODE_PRIVATE);
+    if (proxyId <= Settings.PROXY_ID_NONE ||
+        p.getInt("tunnel_proxy_id", Settings.PROXY_ID_NONE) != proxyId) return false;
+    stop(c);
+    return true;
+  }
   @Nullable @Override public IBinder onBind (Intent intent) { return null; }
 
   @Override public void onCreate () {
@@ -217,6 +227,8 @@ public class SshTunnelService extends Service {
 
   // Settings.addOrUpdateProxy() notifies UI adapters and must run on the main thread.
   private void applyProxyOnMainThread () {
+    // A removal can race with a queued main-thread callback from the SSH worker.
+    if (!running || !SshTunnelConfig.isEnabled(this) || session == null || !session.isConnected()) return;
     Settings settings = Settings.instance();
     android.content.SharedPreferences p = getSharedPreferences("ssh_tunnel_config", MODE_PRIVATE);
     Settings.Proxy old = settings.getProxyConfig(p.getInt("previous_proxy_id", Settings.PROXY_ID_NONE));
