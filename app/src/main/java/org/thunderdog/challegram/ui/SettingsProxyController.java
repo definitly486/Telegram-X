@@ -611,6 +611,9 @@ public class SettingsProxyController extends RecyclerViewController<Void> implem
     if (proxyId == Settings.PROXY_ID_NONE) {
       return;
     }
+    // Removing the generated 127.0.0.1:1080 entry also disables its SSH tunnel.
+    // This clears the persisted enabled flag before any pending reconnect can re-add it.
+    SshTunnelService.stopIfTunnelProxy(context(), proxyId);
     if (proxyId == effectiveProxyId) {
       Settings.instance().disableProxy();
     }
