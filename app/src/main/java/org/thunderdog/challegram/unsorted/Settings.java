@@ -777,7 +777,7 @@ public class Settings {
   private final TdlibLogSettings tdlibLogSettings = new TdlibLogSettings(KEY_TDLIB_OTHER, KEY_TDLIB_LOG_SIZE, KEY_TDLIB_VERBOSITY);
 
   public static final float[] CHAT_FONT_SIZES = {12f, 13f, 14f, 15f, 16f, 18f, 20f, 22f, 24f, 26f};
-  public static final float CHAT_FONT_SIZE_DEFAULT = 15f;
+  public static final float CHAT_FONT_SIZE_DEFAULT = 20f;
   private static final float CHAT_FONT_SIZE_MIN = CHAT_FONT_SIZES[0];
   private static final float CHAT_FONT_SIZE_MAX = CHAT_FONT_SIZES[CHAT_FONT_SIZES.length - 1];
 
